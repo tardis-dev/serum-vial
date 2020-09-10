@@ -14,4 +14,6 @@ describe('Serum Machine', () => {
   afterAll(async () => {
     await serumMachine.stop()
   })
+
+  test('hello', () => {})
 })
