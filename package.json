@@ -16,6 +16,7 @@
     "test": "jest --runInBand --forceExit",
     "benchmark": "node ./benchmark.js",
     "prepare": "npm run build",
+    "start": "npm run build && node ./bin/serum-machine.js",
     "release": "cross-var \"npm run build && npm run test && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && npm publish --access=public\""
   },
   "bin": {
@@ -38,7 +39,10 @@
   "dependencies": {
     "@project-serum/serum": "^0.12.2",
     "@solana/web3.js": "^0.74.0",
+    "@types/bintrees": "^1.0.2",
+    "bintrees": "^1.0.2",
     "debug": "^4.1.1",
+    "didyoumean2": "^4.1.0",
     "is-docker": "^2.1.1",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v18.4.0",
     "yargs": "^16.0.3"

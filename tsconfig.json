@@ -18,6 +18,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
+    "incremental": true,
     "lib": ["es2017", "dom"]
   }
 }
