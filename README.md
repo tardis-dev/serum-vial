@@ -59,7 +59,7 @@ Real-time market data API server for Serum DEX
 - ### Docker
   Pulls and runs latest version of [`tardisdev/serum-machine` image](https://hub.docker.com/r/tardisdev/serum-machine). Serum Matchine server will available on host via `8000` port (for example [http://localhost:8000/v1/markets](http://localhost:8000/v1/markets)) with debug logs enabled (`TM_DEBUG` env var).
   ```sh
-  docker run -p 8000:8000 -e "SM_ENDPOINT=https://solana-api.projectserum.com" -e "SM_DEBUG=true" -d tardisdev/serum-machine
+  docker run -p 8000:8000 -e "SM_ENDPOINT=https://solana-api.projectserum.com" -e "SM_DEBUG=true" -d tardisdev/serum-machine:latest
   ```
   <br/>
   <br/>
