@@ -10,7 +10,7 @@ export const MESSAGE_TYPES = [
   'done',
   'l2update',
   'l2snapshot',
-  'l3snapshot',
+  'openorders',
   'subscribed',
   'quote',
   'unsubscribed',
@@ -19,9 +19,9 @@ export const MESSAGE_TYPES = [
 
 export const MESSAGE_TYPES_PER_CHANNEL: { [key in Channel]: MessageType[] } = {
   trades: ['match'],
-  level1: ['quote'],
+  level1: ['quote', 'match'],
   level2: ['l2snapshot', 'l2update', 'match'],
-  level3: ['l3snapshot', 'received', 'open', 'match', 'done']
+  level3: ['openorders', 'received', 'open', 'match', 'done']
 }
 
 export const MARKETS_SYMBOLS = MARKETS.map((m) => m.name)

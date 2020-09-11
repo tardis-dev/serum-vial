@@ -109,7 +109,7 @@ class Minion {
         if (requestedTypes.includes('l2snapshot')) {
           // TODO: send L2 snapshot for requested market
         }
-        if (requestedTypes.includes('l3snapshot')) {
+        if (requestedTypes.includes('openorders')) {
           // TODO: send L3 snapshot for requested market
         }
       }

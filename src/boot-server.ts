@@ -7,18 +7,15 @@ import { SerumProducer } from './serum-producer'
 
 const debug = createDebugLogger('boot-server')
 
-// server boots with multiple serum machine 'minions' and single serum producer (running in main thread only)
-//
-// minions run as separate worker threads and handle WebSocket data streaming to all connected clients
-// serum producer is responsible for connecting to Serum Node RPC WS API
-// subscribing to it's data feed for all supported markets
-// and producing normalized messages that are then passed to minions and published via WS to all subscribed client
-
 export async function bootServer({ port, nodeEndpoint }: BootOptions) {
   const serumProducer = new SerumProducer({ nodeEndpoint })
   await serumProducer.start()
 
-  const workers = os.cpus().map(() => {
+  // multi core support is linux only feature which allows multiple threads to bind to the same port
+  // see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/
+  const WORKERS_COUNT = os.platform() === 'linux' ? os.cpus().length : 1
+
+  const workers = [...Array(WORKERS_COUNT).keys()].map(() => {
     const serumMachineMinion = new Worker(path.resolve(__dirname, 'minion.js'), { workerData: { port } })
 
     serumMachineMinion.on('error', (err) => {

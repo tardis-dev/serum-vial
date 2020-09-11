@@ -80,6 +80,6 @@ export interface Done extends DataMessage {
   readonly type: 'done'
 }
 
-export interface L3Snapshot extends DataMessage {
-  readonly type: 'l3snapshot'
+export interface OpenOrders extends DataMessage {
+  readonly type: 'openorders'
 }
