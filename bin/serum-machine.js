@@ -8,7 +8,7 @@ const DEFAULT_PORT = 8000
 const DEFAULT_NODE_ENDPOINT = 'https://solana-api.projectserum.com'
 const argv = yargs
   .scriptName('serum-machine')
-  .env('TM_')
+  .env('SM_')
   .strict()
 
   .option('port', {
