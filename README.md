@@ -22,7 +22,7 @@ Real-time market data API server for Serum DEX
   npx serum-machine --endpoint https://testnet.solana.com
   ```
 
-  Run `npx serum-machine --help` to see all available startup options (node endpoint url, cluster mode etc.)
+  Run `npx serum-machine --help` to see all available startup options (node endpoint url, port etc.)
   <br/>
   <br/>
 
@@ -41,7 +41,7 @@ Real-time market data API server for Serum DEX
   serum-machine --endpoint https://testnet.solana.com
   ```
 
-  Run `serum-machine --help` to see all available startup options (node endpoint url, cluster mode etc.)
+  Run `serum-machine --help` to see all available startup options (node endpoint url, port etc.)
   <br/>
   <br/>
 

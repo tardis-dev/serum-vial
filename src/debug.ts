@@ -1,2 +1,5 @@
 import dbg from 'debug'
-export const debug = dbg('serum-machine')
+
+export function createDebugLogger(prefix: string) {
+  return dbg(`serum-machine:${prefix}`)
+}

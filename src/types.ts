@@ -11,6 +11,10 @@ export interface Message {
   readonly timestamp: Date
 }
 
+export interface DataMessage extends Message {
+  readonly symbol: string
+}
+
 export interface ErrorResponse extends Message {
   readonly type: 'error'
   readonly message: string
@@ -24,16 +28,14 @@ export interface SuccessResponse extends Message {
 
 export type PriceLevel = [number, number]
 
-export interface L2 extends Message {
+export interface L2 extends DataMessage {
   readonly type: 'l2update' | 'l2snapshot'
-  readonly symbol: string
   readonly asks: PriceLevel[]
   readonly bids: PriceLevel[]
 }
 
-export interface Quote extends Message {
+export interface Quote extends DataMessage {
   readonly type: 'quote'
-  readonly symbol: string
   readonly bestAsk: PriceLevel | undefined
   readonly bestBid: PriceLevel | undefined
 }
@@ -45,9 +47,8 @@ type OrderMeta = {
 }
 
 // TODO: review and finish remaining types
-export interface Match extends Message {
+export interface Match extends DataMessage {
   readonly type: 'match'
-  readonly symbol: string
   readonly price: number
   readonly size: number
   readonly side: 'buy' | 'sell' // liquidity taker side
@@ -56,9 +57,8 @@ export interface Match extends Message {
   readonly takerOrder: OrderMeta
 }
 
-export interface Received extends Message {
+export interface Received extends DataMessage {
   readonly type: 'received'
-  readonly symbol: string
   readonly reason: 'new' | 'cancel'
   readonly orderType: 'limit' | 'ioc' | 'postOnly'
 
@@ -68,19 +68,18 @@ export interface Received extends Message {
   readonly size: number
 }
 
-export interface Open extends Message {
+export interface Open extends DataMessage {
   readonly type: 'open'
-  readonly symbol: string
   readonly price: number
   readonly size: number
   readonly side: 'buy' | 'sell' // liquidity taker side
   readonly order: OrderMeta
 }
 
-export interface Done extends Message {
+export interface Done extends DataMessage {
   readonly type: 'done'
 }
 
-export interface L3Snapshot extends Message {
+export interface L3Snapshot extends DataMessage {
   readonly type: 'l3snapshot'
 }
