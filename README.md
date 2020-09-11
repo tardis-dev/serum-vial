@@ -7,7 +7,7 @@ Real-time market data API server for Serum DEX
 
 ## Architecture
 
-![architecture diagram](https://user-images.githubusercontent.com/51779538/92922470-30a8c680-f436-11ea-8a9d-60fc1171c1f6.png)
+![architecture diagram](https://user-images.githubusercontent.com/51779538/92927713-5639ce00-f43e-11ea-9719-2290180704cb.png)
 
 - multi core support via [`worker_threads`](https://nodejs.org/api/worker_threads.html) is linux only feature which allows multiple threads to bind to the same port, see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/ - for other OSes there's only one worker thread running
 - server runs with multiple `Minions` worker threads and single `Serum Producer` that runs in the main thread
