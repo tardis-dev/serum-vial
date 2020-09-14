@@ -7,13 +7,14 @@ Real-time market data API server for Serum DEX
 
 ## Architecture
 
-![architecture diagram](https://user-images.githubusercontent.com/51779538/92929140-5f2b9f00-f440-11ea-88e2-98129122031b.png)
+![architecture diagram](https://user-images.githubusercontent.com/51779538/92960443-ed6a4a00-f46d-11ea-9da8-2d4546db8a7d.png)
 
-- multi core support via [`worker_threads`](https://nodejs.org/api/worker_threads.html) is linux only feature which allows multiple threads to bind to the same port, see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/ - for other OSes there's only one worker thread running
-- server runs with multiple `Minions` worker threads and single `Serum Producer` that runs in the main thread
-- `Minions` are responsible for WebSocket data streaming to all connected clients
+
+- server runs with multiple `Minions` worker threads* and single `Serum Producer` that runs in the main thread
+- `Minions` are responsible for WebSockets subscriptions management that includes handling subscriptions requests and sending data to all connected clients
 - `Serum Producer` is responsible for connecting to Serum Node RPC WS API and subscribing all relevant accounts changes (event & request queue, bids & asks) for all supported markets as well as producing market data messages that are then passed to minions and published as WebSocket messages to all subscribed clients
 
+\* multi core support via [`worker_threads`](https://nodejs.org/api/worker_threads.html) is linux only feature which allows multiple threads to bind to the same port, see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/ - for other OSes there's only one worker thread running
 <br/>
 <br/>
 
@@ -78,7 +79,7 @@ ws.onmessage = (message) => {
 ws.onopen = () => {
   const subscribePayload = {
     op: 'subscribe',
-    channel: 'level2',
+    channel: 'trades',
     markets: ['BTC/USDT', 'SRM/USDT']
   }
 
