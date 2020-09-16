@@ -1,9 +1,9 @@
-import { Market, MARKETS, Orderbook } from '@project-serum/serum'
-import { Order } from '@project-serum/serum/lib/market'
-import { AccountInfo, Connection } from '@solana/web3.js'
+import { Market, MARKETS } from '@project-serum/serum'
+import { AccountInfo, Connection, Context } from '@solana/web3.js'
 import { PassThrough } from 'stream'
+import { RequestQueueDataMapper } from './data-mappers'
 import { createDebugLogger } from './debug'
-import { DataMessage, L2, PriceLevel } from './types'
+import { AccountName, AccountsData, DataMessage } from './types'
 
 const debug = createDebugLogger('serum-producer')
 
@@ -42,51 +42,141 @@ export class SerumProducer {
   private async _startProducerForMarket(marketMeta: typeof MARKETS[0], connection: Connection) {
     const market = await Market.load(connection, marketMeta.address, undefined, marketMeta.programId)
 
-    const onBidsChange = this._onBidsAccountChanged(marketMeta.name, market)
-    // first request for bids account data so we have initial bids ready
-    const bidsResponse = await connection.getAccountInfo(market.bidsAddress)
-    onBidsChange(bidsResponse!)
-    // then subscribe for bids account changes
-    connection.onAccountChange(market.bidsAddress, onBidsChange, 'recent')
+    const accountsNotification = new AccountsNotification(connection, market)
 
-    // TODO: asks
-    // TODO: events queue
-    // TODO: request queue
-    // TODO: data normalization
-    // TODO: book differ
+    accountsNotification.onAccountsChange = this._processMarketsAccountsChange(marketMeta.name, market)
   }
 
-  private _onBidsAccountChanged(symbol: string, market: Market) {
-    let lastSeenAccountData: Buffer | undefined = undefined
-    return (account: AccountInfo<Buffer>) => {
-      // same data as for last update skip it
-      if (lastSeenAccountData !== undefined && lastSeenAccountData.equals(account.data)) {
-        return
-      }
-      lastSeenAccountData = account.data
+  private _processMarketsAccountsChange(symbol: string, market: Market) {
+    const requestQueueDataMapper = new RequestQueueDataMapper(symbol, market)
 
-      // TODO: handle it properly, diffs only etc
-      const lastBidsOrders = [...Orderbook.decode(market, account.data)]
-      const message: L2 = {
-        type: 'l2update',
-        symbol,
-        asks: [],
-        bids: lastBidsOrders.reduce(this._reduceToL2, [] as [number, number][]),
-        timestamp: new Date()
-      }
+    return (accountsData: AccountsData, context: Context) => {
+      const timestamp = new Date() // sue the same timestamp for all messages received in single notification
 
-      this._buffer.write(message)
+      if (accountsData.requestQueue !== undefined) {
+        // map newly added request queue items to messages and publish
+        for (const message of requestQueueDataMapper.map(accountsData.requestQueue, context, timestamp)) {
+          console.log(message)
+          this._publishMessage(message)
+        }
+      }
     }
   }
 
-  private _reduceToL2(previous: PriceLevel[], current: Order) {
-    const matchingPriceLevel = previous.find((l) => l[0] === current.price)
-    if (matchingPriceLevel !== undefined) {
-      matchingPriceLevel[1] += current.size
-    } else {
-      previous.push([current.price, current.size])
+  private _publishMessage(message: DataMessage) {
+    this._buffer.write(message)
+  }
+}
+
+// this helper class handles RPC subscriptions to seprate DEX accounts (bids, asks, request & event queue)
+// and provide notification in synchronized fashion, meaning  we get at most one notification per slot
+// with accounts data that changed in that slot
+//
+// This way we always process accounts updates in the same order as single update
+// otherwise we would end up processing eventsQueue changes before requestChanges if that would be
+// the order of accountNotification messages returned by the server which would be wrong
+//as we'd end up with 'done' message published before 'received' message for example
+//
+// TODO: when https://github.com/solana-labs/solana/issues/12237 is implemented
+// we'll be able to subscribe to multiple accounts at once and get rid of that helper class
+
+class AccountsNotification {
+  private _currentSlot: number | undefined = undefined
+  private _state: 'PRISTINE' | 'PENDING' | 'PUBLISHED' = 'PRISTINE'
+  private _accountsData!: AccountsData
+  private _publishTID: NodeJS.Timer | undefined = undefined
+  public onAccountsChange: ((accountsData: AccountsData, context: Context) => void) | undefined = undefined
+
+  constructor(private readonly _connection: Connection, private readonly _market: Market) {
+    this._resetAccountData()
+    this._subscribeToAccountsChanges()
+  }
+
+  private _subscribeToAccountsChanges() {
+    const onAccountChange = (accountName: AccountName) => {
+      return (account: AccountInfo<Buffer>, context: Context) => {
+        this._update(accountName, account.data, context.slot)
+      }
     }
 
-    return previous
+    this._connection.onAccountChange(this._market.asksAddress, onAccountChange('asks'), 'recent')
+    this._connection.onAccountChange(this._market.bidsAddress, onAccountChange('bids'), 'recent')
+    this._connection.onAccountChange((this._market as any)._decoded.eventQueue, onAccountChange('eventQueue'), 'recent')
+    this._connection.onAccountChange((this._market as any)._decoded.requestQueue, onAccountChange('requestQueue'), 'recent')
+  }
+
+  private _resetAccountData() {
+    this._accountsData = {
+      bids: undefined,
+      asks: undefined,
+      requestQueue: undefined,
+      eventQueue: undefined
+    }
+  }
+  private _publish = () => {
+    if (this.onAccountsChange !== undefined) {
+      this.onAccountsChange(this._accountsData, { slot: this._currentSlot! })
+    }
+
+    this._resetAccountData()
+
+    if (this._publishTID !== undefined) {
+      clearTimeout(this._publishTID)
+      this._publishTID = undefined
+    }
+
+    this._state = 'PUBLISHED'
+  }
+
+  private _startPublishTimer() {
+    // wait up to 400ms for remaining accounts notifications
+    this._publishTID = setTimeout(this._publish, 400)
+  }
+
+  private _receivedDataForAllAccounts() {
+    return (
+      this._accountsData.bids !== undefined &&
+      this._accountsData.asks !== undefined &&
+      this._accountsData.eventQueue !== undefined &&
+      this._accountsData.requestQueue !== undefined
+    )
+  }
+
+  private _update(accountName: 'bids' | 'asks' | 'requestQueue' | 'eventQueue', accountData: Buffer, slot: number) {
+    if (this._state === 'PUBLISHED') {
+      // if after we published accounts notification
+      // and for some reason next received notification is for already published slot or older
+      // throw error as it's this is situation that should never happen
+      if (slot <= this._currentSlot!) {
+        throw new Error(`Out of order notification after publish: current slot ${this._currentSlot}, update slot: ${slot}`)
+      } else {
+        // otherwise move to pristine state
+        this._state = 'PRISTINE'
+      }
+    }
+
+    if (this._state === 'PRISTINE') {
+      this._currentSlot = slot
+      this._startPublishTimer()
+      this._state = 'PENDING'
+    }
+
+    if (this._state === 'PENDING') {
+      // event for the same slot, just update the data for account
+      if (slot === this._currentSlot) {
+        this._accountsData[accountName] = accountData
+        // it's pending but since we have data for all accounts for current slot we can publish immediately
+        if (this._receivedDataForAllAccounts()) {
+          this._publish()
+        }
+      } else if (slot > this._currentSlot!) {
+        // we received data for next slot, let's publish data for current slot
+        this._publish()
+        // and run the update again
+        this._update(accountName, accountData, slot)
+      } else {
+        throw new Error(`Out of order notification for pending event: current slot ${this._currentSlot}, update slot: ${slot}`)
+      }
+    }
   }
 }

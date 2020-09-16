@@ -1,4 +1,27 @@
+import { PublicKey } from '@solana/web3.js'
+import BN from 'bn.js'
 import { Op, Channel, MessageType } from './consts'
+
+export type AccountName = 'bids' | 'asks' | 'requestQueue' | 'eventQueue'
+export type AccountsData = { [key in AccountName]: Buffer | undefined }
+
+export type RequestQueueItem = {
+  requestFlags: {
+    newOrder: boolean
+    cancelOrder: boolean
+    bid: boolean
+    postOnly: boolean
+    ioc: boolean
+  }
+
+  openOrdersSlot: number
+  feeTier: number
+  maxBaseSizeOrCancelId: BN
+  nativeQuoteQuantityLocked: BN
+  orderId: BN
+  openOrders: PublicKey
+  clientOrderId?: BN
+}
 
 export type SubRequest = {
   readonly op: Op
@@ -13,6 +36,7 @@ export interface Message {
 
 export interface DataMessage extends Message {
   readonly symbol: string
+  readonly slot: number
 }
 
 export interface ErrorResponse extends Message {
@@ -40,6 +64,14 @@ export interface Quote extends DataMessage {
   readonly bestBid: PriceLevel | undefined
 }
 
+export interface Trade extends DataMessage {
+  readonly type: 'trade'
+  readonly price: number
+  readonly size: number
+  readonly side: 'buy' | 'sell' // liquidity taker side
+  readonly id: string
+}
+
 type OrderMeta = {
   id: string
   accountId: string
@@ -47,8 +79,8 @@ type OrderMeta = {
 }
 
 // TODO: review and finish remaining types
-export interface Match extends DataMessage {
-  readonly type: 'match'
+export interface Fill extends DataMessage {
+  readonly type: 'fill'
   readonly price: number
   readonly size: number
   readonly side: 'buy' | 'sell' // liquidity taker side
@@ -59,13 +91,24 @@ export interface Match extends DataMessage {
 
 export interface Received extends DataMessage {
   readonly type: 'received'
-  readonly reason: 'new' | 'cancel'
-  readonly orderType: 'limit' | 'ioc' | 'postOnly'
-
+  readonly reason: 'new' | 'cancel' // TODO: is this a good field name for those values?
   readonly side: 'buy' | 'sell'
-  readonly order: OrderMeta
+  readonly orderId: string
+  readonly clientId?: string
+  readonly openOrdersAccount: string
+  readonly openOrdersSlot: number
+  readonly feeTier: number
+}
+
+export interface ReceivedNewOrder extends Received {
+  readonly reason: 'new'
+  readonly orderType: 'limit' | 'ioc' | 'postOnly'
   readonly price: number
   readonly size: number
+}
+
+export interface ReceivedCancelOrder extends Received {
+  readonly reason: 'cancel'
 }
 
 export interface Open extends DataMessage {
