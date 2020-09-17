@@ -3,6 +3,7 @@ import { AccountInfo, Connection, Context } from '@solana/web3.js'
 import { PassThrough } from 'stream'
 import { RequestQueueDataMapper } from './data-mappers'
 import { createDebugLogger } from './debug'
+import { batch } from './helpers'
 import { AccountName, AccountsData, DataMessage } from './types'
 
 const debug = createDebugLogger('serum-producer')
@@ -21,13 +22,14 @@ export class SerumProducer {
 
   public async start() {
     debug('starting...')
-    const connection = new Connection(this._options.nodeEndpoint)
 
-    await Promise.all(
-      MARKETS.map(async (market) => {
-        await this._startProducerForMarket(market, connection)
-      })
-    )
+    for (const marketsBatch of batch(MARKETS, 5)) {
+      await Promise.all(
+        marketsBatch.map((market) => {
+          return this._startProducerForMarket(market)
+        })
+      )
+    }
 
     debug('started')
   }
@@ -39,7 +41,9 @@ export class SerumProducer {
     }
   }
 
-  private async _startProducerForMarket(marketMeta: typeof MARKETS[0], connection: Connection) {
+  private async _startProducerForMarket(marketMeta: typeof MARKETS[0]) {
+    const connection = new Connection(this._options.nodeEndpoint)
+
     const market = await Market.load(connection, marketMeta.address, undefined, marketMeta.programId)
 
     const accountsNotification = new AccountsNotification(connection, market)
@@ -148,7 +152,7 @@ class AccountsNotification {
       // and for some reason next received notification is for already published slot or older
       // throw error as it's this is situation that should never happen
       if (slot <= this._currentSlot!) {
-        throw new Error(`Out of order notification after publish: current slot ${this._currentSlot}, update slot: ${slot}`)
+        throw new Error(`Out of order notification after publish: market: current slot ${this._currentSlot}, update slot: ${slot}`)
       } else {
         // otherwise move to pristine state
         this._state = 'PRISTINE'

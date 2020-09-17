@@ -6,9 +6,11 @@ export class RequestQueueDataMapper {
   // this is helper object that marks last seen request item so we don't process the same items over and over
   private _lastSeenRequestQueueHead: RequestQueueItem | undefined = undefined
 
-  constructor(private readonly _marketSymbol: string, private readonly _market: Market) {}
+  constructor(private readonly _symbol: string, private readonly _market: Market) {}
 
   public *map(requestQueueData: Buffer, context: Context, timestamp: Date) {
+    // we're interested only in newly added request queue items since last update
+    // each account update publishes 'snaphost' not 'delta'
     const { newlyAddedRequestQueueItems, requestQueueHead } = this._getNewlyAddedRequestQueueItems(
       requestQueueData,
       this._lastSeenRequestQueueHead
@@ -31,7 +33,7 @@ export class RequestQueueDataMapper {
     if (item.requestFlags.cancelOrder) {
       const cancelMessage: ReceivedCancelOrder = {
         type: 'received',
-        symbol: this._marketSymbol,
+        symbol: this._symbol,
         timestamp,
         orderId,
         side,
@@ -47,7 +49,7 @@ export class RequestQueueDataMapper {
     } else {
       const newOrderMessage: ReceivedNewOrder = {
         type: 'received',
-        symbol: this._marketSymbol,
+        symbol: this._symbol,
         timestamp,
         orderId,
         side,
@@ -67,7 +69,8 @@ export class RequestQueueDataMapper {
   }
 
   private _getNewlyAddedRequestQueueItems(requestQueueData: Buffer, lastSeenRequestQueueHead: RequestQueueItem | undefined) {
-    // TODO: is there a better way to process only new items since last update?
+    // TODO: is there a better way to process only new items since last update
+    // as currently we're remembering last update queue head item and compare to that
 
     const queue = this._decodeRequestQueue(requestQueueData)
     let requestQueueHead: RequestQueueItem | undefined = undefined
@@ -129,6 +132,8 @@ export class RequestQueueDataMapper {
 }
 
 function requestItemsEqual(item1: RequestQueueItem, item2: RequestQueueItem) {
+  // TODO: can this be simplified?
+  // what makes an item unique in the queue?
   if (item1.orderId.eq(item2.orderId) === false) {
     return false
   }

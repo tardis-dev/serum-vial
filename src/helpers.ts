@@ -17,3 +17,9 @@ export function getDidYouMean(input: string, allowedValues: readonly string[]) {
 export function getAllowedValuesText(allowedValues: readonly string[]) {
   return `Allowed values: ${allowedValues.map((val) => `'${val}'`).join(', ')}.`
 }
+
+export function* batch<T>(items: T[], batchSize: number) {
+  for (let i = 0; i < items.length; i += batchSize) {
+    yield items.slice(i, i + batchSize)
+  }
+}

@@ -78,9 +78,8 @@ type OrderMeta = {
   clientId?: string
 }
 
-// TODO: review and finish remaining types
-export interface Fill extends DataMessage {
-  readonly type: 'fill'
+export interface Filled extends DataMessage {
+  readonly type: 'filled'
   readonly price: number
   readonly size: number
   readonly side: 'buy' | 'sell' // liquidity taker side
@@ -89,7 +88,7 @@ export interface Fill extends DataMessage {
   readonly takerOrder: OrderMeta
 }
 
-export interface Received extends DataMessage {
+export interface ReceivedOrder extends DataMessage {
   readonly type: 'received'
   readonly reason: 'new' | 'cancel' // TODO: is this a good field name for those values?
   readonly side: 'buy' | 'sell'
@@ -100,14 +99,14 @@ export interface Received extends DataMessage {
   readonly feeTier: number
 }
 
-export interface ReceivedNewOrder extends Received {
+export interface ReceivedNewOrder extends ReceivedOrder {
   readonly reason: 'new'
   readonly orderType: 'limit' | 'ioc' | 'postOnly'
   readonly price: number
   readonly size: number
 }
 
-export interface ReceivedCancelOrder extends Received {
+export interface ReceivedCancelOrder extends ReceivedOrder {
   readonly reason: 'cancel'
 }
 
@@ -123,6 +122,6 @@ export interface Done extends DataMessage {
   readonly type: 'done'
 }
 
-export interface OpenOrders extends DataMessage {
-  readonly type: 'openorders'
+export interface Orders extends DataMessage {
+  readonly type: 'orders'
 }
