@@ -60,7 +60,6 @@ export class SerumProducer {
       if (accountsData.requestQueue !== undefined) {
         // map newly added request queue items to messages and publish
         for (const message of requestQueueDataMapper.map(accountsData.requestQueue, context, timestamp)) {
-          console.log(message)
           this._publishMessage(message)
         }
       }
