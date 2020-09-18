@@ -31,11 +31,17 @@ export async function bootServer({ port, nodeEndpoint }: BootOptions) {
   // wait just a bit for worker threads minions to start
   await wait(500)
 
-  for await (const message of serumProducer.produce()) {
+  // we don't await here as bootServer should only start that brodcast flow
+  // in case of unhandled promise rejection whole process will exit
+  broadcastProducedMessagesToMinions(serumProducer, workers)
+}
+
+async function broadcastProducedMessagesToMinions(producer: SerumProducer, minions: Worker[]) {
+  for await (const message of producer.produce()) {
     // each message produced by serum producer needs to be broadcasted to minions
-    for (let i = 0; i < workers.length; i++) {
+    for (let i = 0; i < minions.length; i++) {
       // data is passed as object using structured cloning for each worker, can this be a bottleneck? hmm
-      workers[i].postMessage(message)
+      minions[i].postMessage(message)
     }
   }
 }
