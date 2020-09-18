@@ -1,6 +1,7 @@
-import { decodeRequestQueue, Market } from '@project-serum/serum'
+import { decodeRequestQueue, Market, Orderbook } from '@project-serum/serum'
+import { Order } from '@project-serum/serum/lib/market'
 import { Context } from '@solana/web3.js'
-import { ReceivedCancelOrder, ReceivedNewOrder, RequestQueueItem } from './types'
+import { L3Snapshot, OrderItem, OrderOpen, ReceivedCancelOrder, ReceivedNewOrder, RequestQueueItem } from './types'
 
 export class RequestQueueDataMapper {
   // this is helper object that marks last seen request item so we don't process the same items over and over
@@ -34,15 +35,16 @@ export class RequestQueueDataMapper {
       const cancelMessage: ReceivedCancelOrder = {
         type: 'received',
         symbol: this._symbol,
-        timestamp,
-        orderId,
-        side,
-        reason: 'cancel',
-        feeTier: item.feeTier,
-        openOrdersSlot: item.openOrdersSlot,
-        clientId,
+        timestamp: timestamp,
         slot,
-        openOrdersAccount
+        orderId: orderId,
+        clientId: clientId,
+        side,
+
+        reason: 'cancel',
+        openOrders: openOrdersAccount,
+        openOrdersSlot: item.openOrdersSlot,
+        feeTier: item.feeTier
       }
 
       return cancelMessage
@@ -50,18 +52,18 @@ export class RequestQueueDataMapper {
       const newOrderMessage: ReceivedNewOrder = {
         type: 'received',
         symbol: this._symbol,
-        timestamp,
-        orderId,
+        timestamp: timestamp,
+        slot,
+        orderId: orderId,
+        clientId: clientId,
         side,
-        reason: 'new',
-        orderType: item.requestFlags.ioc ? 'ioc' : item.requestFlags.postOnly ? 'postOnly' : 'limit',
         price: this._market.priceLotsToNumber(item.orderId.ushrn(64)),
         size: this._market.baseSizeLotsToNumber(item.maxBaseSizeOrCancelId),
-        feeTier: item.feeTier,
+        orderType: item.requestFlags.ioc ? 'ioc' : item.requestFlags.postOnly ? 'postOnly' : 'limit',
+        reason: 'new',
+        openOrders: openOrdersAccount,
         openOrdersSlot: item.openOrdersSlot,
-        clientId,
-        slot,
-        openOrdersAccount
+        feeTier: item.feeTier
       }
 
       return newOrderMessage
@@ -127,6 +129,94 @@ export class RequestQueueDataMapper {
           yield largestDecode[i]
         }
       }
+    }
+  }
+}
+
+export class AsksBidsDataMapper {
+  private _localAsks: Order[] | undefined = undefined
+  private _localBids: Order[] | undefined = undefined
+  private _initialized = false
+
+  constructor(private readonly _symbol: string, private readonly _market: Market) {}
+
+  public *map(asksAccountData: Buffer | undefined, bidsAccountData: Buffer | undefined, context: Context, timestamp: number) {
+    // TODO: perhaps this can be more optimize to not allocate new Order array each time
+    if (asksAccountData !== undefined) {
+      const newAsks = [...Orderbook.decode(this._market, asksAccountData)]
+      if (this._initialized) {
+        // find new ask orders since last update
+        for (const ask of newAsks) {
+          const isNewOrder = this._localAsks!.findIndex((f) => f.orderId.eq(ask.orderId)) === -1
+          if (isNewOrder) {
+            yield this._mapToOpenMessage(ask, timestamp, context.slot)
+          }
+        }
+      }
+
+      this._localAsks = newAsks
+    }
+
+    if (bidsAccountData !== undefined) {
+      const newBids = [...Orderbook.decode(this._market, bidsAccountData)]
+      if (this._initialized) {
+        // find new bid orders since last update
+        for (const bid of newBids) {
+          const isNewOrder = this._localBids!.findIndex((f) => f.orderId.eq(bid.orderId)) === -1
+          if (isNewOrder) {
+            yield this._mapToOpenMessage(bid, timestamp, context.slot)
+          }
+        }
+      }
+
+      this._localBids = newBids
+    }
+
+    if (this._initialized === false && this._localAsks !== undefined && this._localBids !== undefined) {
+      this._initialized = true
+      // return full l3 snapshot on init
+      const asksOrders = this._localAsks.map(this._mapToOrderItem)
+      const bidsOrders = this._localBids.map(this._mapToOrderItem)
+
+      const l3Snapshot: L3Snapshot = {
+        type: 'l3snapshot',
+        symbol: this._symbol,
+        timestamp,
+        slot: context.slot,
+        orders: [...asksOrders, ...bidsOrders]
+      }
+
+      yield l3Snapshot
+    }
+  }
+
+  private _mapToOpenMessage(order: Order, timestamp: number, slot: number): OrderOpen {
+    return {
+      type: 'open',
+      symbol: this._symbol,
+      timestamp,
+      slot,
+      orderId: order.orderId.toString(),
+      clientId: order.clientId ? order.clientId.toString() : undefined,
+      side: order.side,
+      price: order.price,
+      size: order.size,
+      openOrders: order.openOrdersAddress.toString(),
+      openOrdersSlot: order.openOrdersSlot,
+      feeTier: order.feeTier
+    }
+  }
+
+  private _mapToOrderItem(order: Order): OrderItem {
+    return {
+      orderId: order.orderId.toString(),
+      clientId: order.clientId ? order.clientId.toString() : undefined,
+      side: order.side,
+      price: order.price,
+      size: order.size,
+      openOrders: order.openOrdersAddress.toString(),
+      openOrdersSlot: order.openOrdersSlot,
+      feeTier: order.feeTier
     }
   }
 }

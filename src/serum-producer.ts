@@ -1,16 +1,16 @@
 import { Market, MARKETS } from '@project-serum/serum'
 import { AccountInfo, Connection, Context } from '@solana/web3.js'
 import { PassThrough } from 'stream'
-import { RequestQueueDataMapper } from './data-mappers'
+import { AsksBidsDataMapper, RequestQueueDataMapper } from './data-mappers'
 import { createDebugLogger } from './debug'
 import { batch } from './helpers'
-import { AccountName, AccountsData, DataMessage } from './types'
+import { AccountName, AccountsData, DataMessage, L3DataMessage } from './types'
 
 const debug = createDebugLogger('serum-producer')
 
 // SerumProducer responsibility is to:
 // - connect to Serum Node RPC API via WS and subscribe to it's data feed for all supported markets
-// - normalize received data and produce normalized data messages
+// - normalize received data and produce normalized L3 data messages
 
 export class SerumProducer {
   private _buffer = new PassThrough({
@@ -54,6 +54,7 @@ export class SerumProducer {
 
   private _processMarketsAccountsChange(symbol: string, market: Market) {
     const requestQueueDataMapper = new RequestQueueDataMapper(symbol, market)
+    const asksBidsDataMapper = new AsksBidsDataMapper(symbol, market)
 
     return (accountsData: AccountsData, context: Context) => {
       const timestamp = new Date().valueOf() // sue the same timestamp for all messages received in single notification
@@ -64,10 +65,16 @@ export class SerumProducer {
           this._publishMessage(message)
         }
       }
+
+      if (accountsData.asks !== undefined || accountsData.bids !== undefined) {
+        for (const message of asksBidsDataMapper.map(accountsData.asks, accountsData.bids, context, timestamp)) {
+          this._publishMessage(message)
+        }
+      }
     }
   }
 
-  private _publishMessage(message: DataMessage) {
+  private _publishMessage(message: L3DataMessage) {
     this._buffer.write(message)
   }
 }

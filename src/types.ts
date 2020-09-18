@@ -1,6 +1,6 @@
 import { PublicKey } from '@solana/web3.js'
 import BN from 'bn.js'
-import { Op, Channel, MessageType } from './consts'
+import { Op, Channel, MessageType, L3MessageType } from './consts'
 
 export type AccountName = 'bids' | 'asks' | 'requestQueue' | 'eventQueue'
 export type AccountsData = { [key in AccountName]: Buffer | undefined }
@@ -37,6 +37,10 @@ export interface Message {
 export interface DataMessage extends Message {
   readonly symbol: string
   readonly slot: number
+}
+
+export interface L3DataMessage extends Message {
+  type: L3MessageType
 }
 
 export interface ErrorResponse extends Message {
@@ -79,7 +83,7 @@ type OrderMeta = {
 }
 
 export interface Filled extends DataMessage {
-  readonly type: 'filled'
+  readonly type: 'fill'
   readonly price: number
   readonly size: number
   readonly side: 'buy' | 'sell' // liquidity taker side
@@ -94,7 +98,7 @@ export interface ReceivedOrder extends DataMessage {
   readonly side: 'buy' | 'sell'
   readonly orderId: string
   readonly clientId?: string
-  readonly openOrdersAccount: string
+  readonly openOrders: string
   readonly openOrdersSlot: number
   readonly feeTier: number
 }
@@ -110,18 +114,26 @@ export interface ReceivedCancelOrder extends ReceivedOrder {
   readonly reason: 'cancel'
 }
 
-export interface Open extends DataMessage {
-  readonly type: 'open'
+export type OrderItem = {
   readonly price: number
   readonly size: number
   readonly side: 'buy' | 'sell' // liquidity taker side
-  readonly order: OrderMeta
+  readonly orderId: string
+  readonly clientId?: string
+  readonly openOrders: string
+  readonly openOrdersSlot: number
+  readonly feeTier: number
+}
+
+export interface OrderOpen extends DataMessage, OrderItem {
+  readonly type: 'open'
 }
 
 export interface Done extends DataMessage {
   readonly type: 'done'
 }
 
-export interface Orders extends DataMessage {
-  readonly type: 'orders'
+export interface L3Snapshot extends DataMessage {
+  readonly type: 'l3snapshot'
+  readonly orders: OrderItem[]
 }

@@ -9,10 +9,9 @@ Real-time market data API server for Serum DEX
 
 ![architecture diagram](https://user-images.githubusercontent.com/51779538/92960443-ed6a4a00-f46d-11ea-9da8-2d4546db8a7d.png)
 
-
-- server runs with multiple `Minions` worker threads* and single `Serum Producer` that runs in the main thread
-- `Minions` are responsible for WebSockets subscriptions management that includes handling subscriptions requests and sending data to all connected clients
-- `Serum Producer` is responsible for connecting to Serum Node RPC WS API and subscribing all relevant accounts changes (event & request queue, bids & asks) for all supported markets as well as producing market data messages that are then passed to minions and published as WebSocket messages to all subscribed clients
+- server runs with multiple `Minions` worker threads\* and single `Serum Producer` that runs in the main thread
+- `Minions` are responsible for WebSockets subscriptions management, constructing L2 & L1 messages out of L3 messages published by `Serum Producer` and broadcasting all those messages to all subscribed clients
+- `Serum Producer` is responsible for connecting to Serum Node RPC WS API and subscribing all relevant accounts changes (event & request queue, bids & asks) for all supported markets as well as producing L3 market data messages that are then passed to minions and published as WebSocket messages to all subscribed clients
 
 \* multi core support via [`worker_threads`](https://nodejs.org/api/worker_threads.html) is linux only feature which allows multiple threads to bind to the same port, see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/ - for other OSes there's only one worker thread running
 <br/>

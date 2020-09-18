@@ -3,26 +3,16 @@ import { MARKETS } from '@project-serum/serum'
 export const OPS = ['subscribe', 'unsubscribe'] as const
 export const CHANNELS = ['level3', 'level2', 'level1', 'trades'] as const
 
-export const MESSAGE_TYPES = [
-  'trade',
-  'received',
-  'open',
-  'filled',
-  'done',
-  'l2update',
-  'l2snapshot',
-  'orders',
-  'subscribed',
-  'quote',
-  'unsubscribed',
-  'error'
-] as const
+const TRADES_MESSAGE_TYPES = ['trade'] as const
+const LEVEL1_MESSAGE_TYPES = ['quote', 'trade'] as const
+const LEVEL2_MESSAGE_TYPES = ['l2snapshot', 'l2update', 'trade'] as const
+const LEVEL3_MESSAGE_TYPES = ['l3snapshot', 'received', 'open', 'fill', 'done'] as const
 
-export const MESSAGE_TYPES_PER_CHANNEL: { [key in Channel]: MessageType[] } = {
-  trades: ['trade'],
-  level1: ['quote', 'trade'],
-  level2: ['l2snapshot', 'l2update', 'trade'],
-  level3: ['orders', 'received', 'open', 'filled', 'done']
+export const MESSAGE_TYPES_PER_CHANNEL: { [key in Channel]: readonly MessageType[] } = {
+  trades: TRADES_MESSAGE_TYPES,
+  level1: LEVEL1_MESSAGE_TYPES,
+  level2: LEVEL2_MESSAGE_TYPES,
+  level3: LEVEL3_MESSAGE_TYPES
 }
 
 export const MARKETS_SYMBOLS = MARKETS.map((m) => m.name)
@@ -37,4 +27,13 @@ for (const market of MARKETS_SYMBOLS) {
 
 export type Channel = typeof CHANNELS[number]
 export type Op = typeof OPS[number]
-export type MessageType = typeof MESSAGE_TYPES[number]
+export type MessageType =
+  | typeof LEVEL3_MESSAGE_TYPES[number]
+  | typeof LEVEL2_MESSAGE_TYPES[number]
+  | typeof LEVEL1_MESSAGE_TYPES[number]
+  | typeof TRADES_MESSAGE_TYPES[number]
+  | 'error'
+  | 'subscribed'
+  | 'unsubscribed'
+
+export type L3MessageType = typeof LEVEL3_MESSAGE_TYPES[number]
