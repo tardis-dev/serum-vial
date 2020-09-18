@@ -8,7 +8,7 @@ export class RequestQueueDataMapper {
 
   constructor(private readonly _symbol: string, private readonly _market: Market) {}
 
-  public *map(requestQueueData: Buffer, context: Context, timestamp: Date) {
+  public *map(requestQueueData: Buffer, context: Context, timestamp: number) {
     // we're interested only in newly added request queue items since last update
     // each account update publishes 'snaphost' not 'delta'
     const { newlyAddedRequestQueueItems, requestQueueHead } = this._getNewlyAddedRequestQueueItems(
@@ -24,7 +24,7 @@ export class RequestQueueDataMapper {
     }
   }
 
-  private _mapRequestItemToReceiveMessage(item: RequestQueueItem, timestamp: Date, slot: number) {
+  private _mapRequestItemToReceiveMessage(item: RequestQueueItem, timestamp: number, slot: number) {
     const clientId = item.clientOrderId ? item.clientOrderId.toString() : undefined
     const side = item.requestFlags.bid ? 'buy' : 'sell'
     const orderId = item.orderId.toString()

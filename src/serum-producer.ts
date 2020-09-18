@@ -42,6 +42,7 @@ export class SerumProducer {
   }
 
   private async _startProducerForMarket(marketMeta: typeof MARKETS[0]) {
+    // current connection strategy to RPC Node is to have separate WS connection per market
     const connection = new Connection(this._options.nodeEndpoint)
 
     const market = await Market.load(connection, marketMeta.address, undefined, marketMeta.programId)
@@ -55,7 +56,7 @@ export class SerumProducer {
     const requestQueueDataMapper = new RequestQueueDataMapper(symbol, market)
 
     return (accountsData: AccountsData, context: Context) => {
-      const timestamp = new Date() // sue the same timestamp for all messages received in single notification
+      const timestamp = new Date().valueOf() // sue the same timestamp for all messages received in single notification
 
       if (accountsData.requestQueue !== undefined) {
         // map newly added request queue items to messages and publish

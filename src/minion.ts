@@ -83,7 +83,7 @@ class Minion {
         const errorMessage: ErrorResponse = {
           type: 'error',
           message: validationResult.error,
-          timestamp: new Date()
+          timestamp: new Date().valueOf()
         }
 
         ws.send(JSON.stringify(errorMessage))
@@ -118,7 +118,7 @@ class Minion {
         type: request.op == 'subscribe' ? 'subscribed' : 'unsubscribed',
         channel: request.channel,
         markets: request.markets,
-        timestamp: new Date()
+        timestamp: new Date().valueOf()
       }
 
       ws.send(JSON.stringify(successMessage))

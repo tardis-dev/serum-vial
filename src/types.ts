@@ -31,7 +31,7 @@ export type SubRequest = {
 
 export interface Message {
   readonly type: MessageType
-  readonly timestamp: Date
+  readonly timestamp: number
 }
 
 export interface DataMessage extends Message {
