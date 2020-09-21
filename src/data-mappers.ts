@@ -224,45 +224,15 @@ export class AsksBidsDataMapper {
 }
 
 function requestItemsEqual(item1: RequestQueueItem, item2: RequestQueueItem) {
-  // TODO: can this be simplified?
-  // what makes an item unique in the queue?
-  if (item1.orderId.eq(item2.orderId) === false) {
-    return false
-  }
-
-  if (item1.openOrdersSlot !== item2.openOrdersSlot) {
-    return false
-  }
-
-  if (item1.maxBaseSizeOrCancelId.eq(item2.maxBaseSizeOrCancelId) === false) {
-    return false
-  }
-
-  if (item1.nativeQuoteQuantityLocked.eq(item2.nativeQuoteQuantityLocked) === false) {
-    return false
-  }
-
-  if (item1.openOrders.equals(item2.openOrders) === false) {
-    return false
-  }
-
-  if (item1.requestFlags.bid !== item2.requestFlags.bid) {
-    return false
-  }
   if (item1.requestFlags.cancelOrder !== item2.requestFlags.cancelOrder) {
     return false
   }
-  if (item1.requestFlags.ioc !== item2.requestFlags.ioc) {
-    return false
-  }
 
-  if (item1.requestFlags.newOrder !== item2.requestFlags.newOrder) {
-    return false
+  if (item1.requestFlags.cancelOrder === true) {
+    // for cancel orders compare by cancel id (seq number), it's the same order if has the same cancel id
+    return item1.maxBaseSizeOrCancelId.eq(item2.maxBaseSizeOrCancelId)
+  } else {
+    // for new orders compare by oder id as order id includes seq number
+    return item1.orderId.eq(item2.orderId)
   }
-
-  if (item1.requestFlags.postOnly !== item2.requestFlags.postOnly) {
-    return false
-  }
-
-  return true
 }
