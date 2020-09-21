@@ -5,7 +5,7 @@ import { Op, Channel, MessageType, L3MessageType } from './consts'
 export type AccountName = 'bids' | 'asks' | 'requestQueue' | 'eventQueue'
 export type AccountsData = { [key in AccountName]: Buffer | undefined }
 
-export type RequestQueueItem = {
+export type Request = {
   requestFlags: {
     newOrder: boolean
     cancelOrder: boolean
@@ -76,25 +76,23 @@ export interface Trade extends DataMessage {
   readonly id: string
 }
 
-type OrderMeta = {
-  id: string
-  accountId: string
-  clientId?: string
-}
-
-export interface Filled extends DataMessage {
+export interface Fill extends DataMessage {
   readonly type: 'fill'
   readonly price: number
   readonly size: number
-  readonly side: 'buy' | 'sell' // liquidity taker side
-  readonly id: string
-  readonly makerOrder: OrderMeta
-  readonly takerOrder: OrderMeta
+  readonly side: 'buy' | 'sell'
+  readonly maker: boolean
+  readonly feeCost: number
+  readonly orderId: string
+  readonly clientId?: string
+  readonly openOrders: string
+  readonly openOrdersSlot: number
+  readonly feeTier: number
 }
 
-export interface ReceivedOrder extends DataMessage {
+export interface OrderReceived extends DataMessage {
   readonly type: 'received'
-  readonly reason: 'new' | 'cancel'
+  readonly reason: 'place' | 'cancel'
   readonly side: 'buy' | 'sell'
   readonly orderId: string
   readonly sequence: string
@@ -104,21 +102,21 @@ export interface ReceivedOrder extends DataMessage {
   readonly feeTier: number
 }
 
-export interface ReceivedNewOrder extends ReceivedOrder {
-  readonly reason: 'new'
+export interface PlaceOrderReceived extends OrderReceived {
+  readonly reason: 'place'
   readonly orderType: 'limit' | 'ioc' | 'postOnly'
   readonly price: number
   readonly size: number
 }
 
-export interface ReceivedCancelOrder extends ReceivedOrder {
+export interface CancelOrderReceived extends OrderReceived {
   readonly reason: 'cancel'
 }
 
 export type OrderItem = {
   readonly price: number
   readonly size: number
-  readonly side: 'buy' | 'sell' // liquidity taker side
+  readonly side: 'buy' | 'sell'
   readonly orderId: string
   readonly clientId?: string
   readonly openOrders: string
@@ -132,6 +130,13 @@ export interface OrderOpen extends DataMessage, OrderItem {
 
 export interface Done extends DataMessage {
   readonly type: 'done'
+  readonly reason: 'filled' | 'canceled'
+  readonly side: 'buy' | 'sell'
+  readonly orderId: string
+  readonly clientId?: string
+  readonly openOrders: string
+  readonly openOrdersSlot: number
+  readonly feeTier: number
 }
 
 export interface L3Snapshot extends DataMessage {

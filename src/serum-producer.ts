@@ -1,7 +1,7 @@
 import { Market, MARKETS } from '@project-serum/serum'
 import { AccountInfo, Connection, Context } from '@solana/web3.js'
 import { PassThrough } from 'stream'
-import { AsksBidsDataMapper, RequestQueueDataMapper } from './data-mappers'
+import { AsksBidsDataMapper, EventQueueDataMapper, RequestQueueDataMapper } from './data-mappers'
 import { createDebugLogger } from './debug'
 import { batch } from './helpers'
 import { AccountName, AccountsData, DataMessage, L3DataMessage } from './types'
@@ -55,6 +55,7 @@ export class SerumProducer {
   private _processMarketsAccountsChange(symbol: string, market: Market) {
     const requestQueueDataMapper = new RequestQueueDataMapper(symbol, market)
     const asksBidsDataMapper = new AsksBidsDataMapper(symbol, market)
+    const eventQueueDataMapper = new EventQueueDataMapper(symbol, market)
 
     return (accountsData: AccountsData, context: Context) => {
       const timestamp = new Date().valueOf() // sue the same timestamp for all messages received in single notification
@@ -68,6 +69,12 @@ export class SerumProducer {
 
       if (accountsData.asks !== undefined || accountsData.bids !== undefined) {
         for (const message of asksBidsDataMapper.map(accountsData.asks, accountsData.bids, context, timestamp)) {
+          this._publishMessage(message)
+        }
+      }
+
+      if (accountsData.eventQueue !== undefined) {
+        for (const message of eventQueueDataMapper.map(accountsData.eventQueue, context, timestamp)) {
           this._publishMessage(message)
         }
       }
