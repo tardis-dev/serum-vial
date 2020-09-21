@@ -94,9 +94,10 @@ export interface Filled extends DataMessage {
 
 export interface ReceivedOrder extends DataMessage {
   readonly type: 'received'
-  readonly reason: 'new' | 'cancel' // TODO: is this a good field name for those values?
+  readonly reason: 'new' | 'cancel'
   readonly side: 'buy' | 'sell'
   readonly orderId: string
+  readonly sequence: string
   readonly clientId?: string
   readonly openOrders: string
   readonly openOrdersSlot: number

@@ -40,7 +40,7 @@ export class RequestQueueDataMapper {
         orderId: orderId,
         clientId: clientId,
         side,
-
+        sequence: item.maxBaseSizeOrCancelId.toString(),
         reason: 'cancel',
         openOrders: openOrdersAccount,
         openOrdersSlot: item.openOrdersSlot,
@@ -49,6 +49,7 @@ export class RequestQueueDataMapper {
 
       return cancelMessage
     } else {
+      const sequenceNumber = side === 'sell' ? item.orderId.maskn(64) : item.orderId.notn(128).maskn(64)
       const newOrderMessage: ReceivedNewOrder = {
         type: 'received',
         symbol: this._symbol,
@@ -57,6 +58,7 @@ export class RequestQueueDataMapper {
         orderId: orderId,
         clientId: clientId,
         side,
+        sequence: sequenceNumber.toString(),
         price: this._market.priceLotsToNumber(item.orderId.ushrn(64)),
         size: this._market.baseSizeLotsToNumber(item.maxBaseSizeOrCancelId),
         orderType: item.requestFlags.ioc ? 'ioc' : item.requestFlags.postOnly ? 'postOnly' : 'limit',
@@ -92,7 +94,7 @@ export class RequestQueueDataMapper {
         break
       }
 
-      // quee returns items from newest to oldest, we should publish messages from oldest from newest
+      // queue returns items from newest to oldest, we should publish messages from oldest from newest
       newlyAddedRequestQueueItems.unshift(requestQueueItem)
     }
 
