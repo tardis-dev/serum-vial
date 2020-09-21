@@ -185,7 +185,8 @@ export class AsksBidsDataMapper {
         symbol: this._symbol,
         timestamp,
         slot: context.slot,
-        orders: [...asksOrders, ...bidsOrders]
+        asks: asksOrders,
+        bids: bidsOrders
       }
 
       yield l3Snapshot

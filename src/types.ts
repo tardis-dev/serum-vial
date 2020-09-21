@@ -1,6 +1,6 @@
 import { PublicKey } from '@solana/web3.js'
 import BN from 'bn.js'
-import { Op, Channel, MessageType, L3MessageType } from './consts'
+import { Op, Channel, MessageType } from './consts'
 
 export type AccountName = 'bids' | 'asks' | 'requestQueue' | 'eventQueue'
 export type AccountsData = { [key in AccountName]: Buffer | undefined }
@@ -37,10 +37,6 @@ export interface Message {
 export interface DataMessage extends Message {
   readonly symbol: string
   readonly slot: number
-}
-
-export interface L3DataMessage extends Message {
-  type: L3MessageType
 }
 
 export interface ErrorResponse extends Message {
@@ -141,5 +137,8 @@ export interface Done extends DataMessage {
 
 export interface L3Snapshot extends DataMessage {
   readonly type: 'l3snapshot'
-  readonly orders: OrderItem[]
+  readonly asks: OrderItem[]
+  readonly bids: OrderItem[]
 }
+
+export type L3DataMessage = PlaceOrderReceived | CancelOrderReceived | OrderOpen | Fill | Done | L3Snapshot
