@@ -3,8 +3,8 @@ import { AccountInfo, Connection, Context } from '@solana/web3.js'
 import { PassThrough } from 'stream'
 import { AsksBidsDataMapper, EventQueueDataMapper, RequestQueueDataMapper } from './data-mappers'
 import { createDebugLogger } from './debug'
-import { batch } from './helpers'
-import { AccountName, AccountsData, DataMessage, L3DataMessage } from './types'
+import { batch, decimalPlaces } from './helpers'
+import { AccountName, AccountsData, L3DataMessage } from './types'
 
 const debug = createDebugLogger('serum-producer')
 
@@ -37,7 +37,7 @@ export class SerumProducer {
   public async *produce() {
     // return async iterable iterator of produced data messages
     for await (const message of this._buffer) {
-      yield message as DataMessage
+      yield message as L3DataMessage
     }
   }
 
@@ -53,28 +53,32 @@ export class SerumProducer {
   }
 
   private _processMarketsAccountsChange(symbol: string, market: Market) {
-    const requestQueueDataMapper = new RequestQueueDataMapper(symbol, market)
-    const asksBidsDataMapper = new AsksBidsDataMapper(symbol, market)
-    const eventQueueDataMapper = new EventQueueDataMapper(symbol, market)
+    const priceDecimalPlaces = decimalPlaces(market.tickSize)
+    const sizeDecimalPlaces = decimalPlaces(market.minOrderSize)
+
+    const requestQueueDataMapper = new RequestQueueDataMapper(symbol, market, priceDecimalPlaces, sizeDecimalPlaces)
+    const asksBidsDataMapper = new AsksBidsDataMapper(symbol, market, priceDecimalPlaces, sizeDecimalPlaces)
+    const eventQueueDataMapper = new EventQueueDataMapper(symbol, market, priceDecimalPlaces, sizeDecimalPlaces)
 
     return (accountsData: AccountsData, context: Context) => {
-      const timestamp = new Date().valueOf() // sue the same timestamp for all messages received in single notification
+      const timestamp = new Date().valueOf() // the same timestamp for all messages received in single notification
+      const slot = context.slot.toString()
 
       if (accountsData.requestQueue !== undefined) {
         // map newly added request queue items to messages and publish
-        for (const message of requestQueueDataMapper.map(accountsData.requestQueue, context, timestamp)) {
+        for (const message of requestQueueDataMapper.map(accountsData.requestQueue, slot, timestamp)) {
           this._publishMessage(message)
         }
       }
 
       if (accountsData.asks !== undefined || accountsData.bids !== undefined) {
-        for (const message of asksBidsDataMapper.map(accountsData.asks, accountsData.bids, context, timestamp)) {
+        for (const message of asksBidsDataMapper.map(accountsData.asks, accountsData.bids, slot, timestamp)) {
           this._publishMessage(message)
         }
       }
 
       if (accountsData.eventQueue !== undefined) {
-        for (const message of eventQueueDataMapper.map(accountsData.eventQueue, context, timestamp)) {
+        for (const message of eventQueueDataMapper.map(accountsData.eventQueue, slot, timestamp)) {
           this._publishMessage(message)
         }
       }

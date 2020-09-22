@@ -1,18 +1,22 @@
 import { decodeRequestQueue, Market, Orderbook } from '@project-serum/serum'
 import { Order } from '@project-serum/serum/lib/market'
 import { decodeEventQueue, Event } from '@project-serum/serum/lib/queue'
-import { Context } from '@solana/web3.js'
 import BN from 'bn.js'
-import { CancelOrderReceived, Done, Fill, L3Snapshot, OrderItem, OrderOpen, PlaceOrderReceived, Request } from './types'
+import { CancelOrderReceived, Done, Fill, L3Snapshot, NewOrderReceived, OrderItem, OrderOpen, Request } from './types'
 
 // Data mappers responsibility is to map DEX accounts data to L3 messages
 export class RequestQueueDataMapper {
   // this is helper object that marks last seen request so we don't process the same requests over and over
   private _lastSeenRequestQueueHead: Request | undefined = undefined
 
-  constructor(private readonly _symbol: string, private readonly _market: Market) {}
+  constructor(
+    private readonly _symbol: string,
+    private readonly _market: Market,
+    private readonly _priceDecimalPlaces: number,
+    private readonly _sizeDecimalPlaces: number
+  ) {}
 
-  public *map(requestQueueData: Buffer, context: Context, timestamp: number) {
+  public *map(requestQueueData: Buffer, slot: string, timestamp: number) {
     // we're interested only in newly added requests to queue since last update
     // each account update publishes 'snaphost' not 'delta' so we need to figure it out the delta on our own
     const { newlyAddedRequests, requestQueueHead } = this._getNewlyAddedRequests(requestQueueData, this._lastSeenRequestQueueHead)
@@ -21,11 +25,11 @@ export class RequestQueueDataMapper {
     this._lastSeenRequestQueueHead = requestQueueHead
 
     for (const request of newlyAddedRequests) {
-      yield this._mapRequestToReceivedMessage(request, timestamp, context.slot)
+      yield this._mapRequestToReceivedMessage(request, timestamp, slot)
     }
   }
 
-  private _mapRequestToReceivedMessage(request: Request, timestamp: number, slot: number) {
+  private _mapRequestToReceivedMessage(request: Request, timestamp: number, slot: string) {
     const clientId = request.clientOrderId ? request.clientOrderId.toString() : undefined
     const side = request.requestFlags.bid ? 'buy' : 'sell'
     const orderId = request.orderId.toString()
@@ -53,7 +57,7 @@ export class RequestQueueDataMapper {
     } else {
       const sequenceNumber = side === 'sell' ? request.orderId.maskn(64) : request.orderId.notn(128).maskn(64)
 
-      const placeOrderReceived: PlaceOrderReceived = {
+      const newOrderReceived: NewOrderReceived = {
         type: 'received',
         symbol: this._symbol,
         timestamp: timestamp,
@@ -62,16 +66,16 @@ export class RequestQueueDataMapper {
         clientId: clientId,
         side,
         sequence: sequenceNumber.toString(),
-        price: this._market.priceLotsToNumber(request.orderId.ushrn(64)),
-        size: this._market.baseSizeLotsToNumber(request.maxBaseSizeOrCancelId),
+        price: this._market.priceLotsToNumber(request.orderId.ushrn(64)).toFixed(this._priceDecimalPlaces),
+        size: this._market.baseSizeLotsToNumber(request.maxBaseSizeOrCancelId).toFixed(this._sizeDecimalPlaces),
         orderType: request.requestFlags.ioc ? 'ioc' : request.requestFlags.postOnly ? 'postOnly' : 'limit',
-        reason: 'place',
+        reason: 'new',
         openOrders: openOrdersAccount,
         openOrdersSlot,
         feeTier
       }
 
-      return placeOrderReceived
+      return newOrderReceived
     }
   }
 
@@ -140,9 +144,14 @@ export class AsksBidsDataMapper {
   private _localBids: Order[] | undefined = undefined
   private _initialized = false
 
-  constructor(private readonly _symbol: string, private readonly _market: Market) {}
+  constructor(
+    private readonly _symbol: string,
+    private readonly _market: Market,
+    private readonly _priceDecimalPlaces: number,
+    private readonly _sizeDecimalPlaces: number
+  ) {}
 
-  public *map(asksAccountData: Buffer | undefined, bidsAccountData: Buffer | undefined, context: Context, timestamp: number) {
+  public *map(asksAccountData: Buffer | undefined, bidsAccountData: Buffer | undefined, slot: string, timestamp: number) {
     // TODO: perhaps this can be more optimized to not allocate new Order array each time if too slow in practice
     if (asksAccountData !== undefined) {
       const newAsks = [...Orderbook.decode(this._market, asksAccountData)]
@@ -151,7 +160,7 @@ export class AsksBidsDataMapper {
         for (const ask of newAsks) {
           const isNewOrder = this._localAsks!.findIndex((f) => f.orderId.eq(ask.orderId)) === -1
           if (isNewOrder) {
-            yield this._mapToOpenMessage(ask, timestamp, context.slot)
+            yield this._mapToOpenMessage(ask, timestamp, slot)
           }
         }
       }
@@ -166,7 +175,7 @@ export class AsksBidsDataMapper {
         for (const bid of newBids) {
           const isNewOrder = this._localBids!.findIndex((f) => f.orderId.eq(bid.orderId)) === -1
           if (isNewOrder) {
-            yield this._mapToOpenMessage(bid, timestamp, context.slot)
+            yield this._mapToOpenMessage(bid, timestamp, slot)
           }
         }
       }
@@ -184,7 +193,7 @@ export class AsksBidsDataMapper {
         type: 'l3snapshot',
         symbol: this._symbol,
         timestamp,
-        slot: context.slot,
+        slot,
         asks: asksOrders,
         bids: bidsOrders
       }
@@ -193,7 +202,7 @@ export class AsksBidsDataMapper {
     }
   }
 
-  private _mapToOpenMessage(order: Order, timestamp: number, slot: number): OrderOpen {
+  private _mapToOpenMessage(order: Order, timestamp: number, slot: string): OrderOpen {
     return {
       type: 'open',
       symbol: this._symbol,
@@ -202,25 +211,27 @@ export class AsksBidsDataMapper {
       orderId: order.orderId.toString(),
       clientId: order.clientId ? order.clientId.toString() : undefined,
       side: order.side,
-      price: order.price,
-      size: order.size,
+      price: order.price.toFixed(this._priceDecimalPlaces),
+      size: order.size.toFixed(this._sizeDecimalPlaces),
       openOrders: order.openOrdersAddress.toString(),
       openOrdersSlot: order.openOrdersSlot,
       feeTier: order.feeTier
     }
   }
 
-  private _mapToOrderItem(order: Order): OrderItem {
-    return {
+  private _mapToOrderItem = (order: Order) => {
+    const orderItem: OrderItem = {
       orderId: order.orderId.toString(),
       clientId: order.clientId ? order.clientId.toString() : undefined,
       side: order.side,
-      price: order.price,
-      size: order.size,
+      price: order.price.toFixed(this._priceDecimalPlaces),
+      size: order.size.toFixed(this._sizeDecimalPlaces),
       openOrders: order.openOrdersAddress.toString(),
       openOrdersSlot: order.openOrdersSlot,
       feeTier: order.feeTier
     }
+
+    return orderItem
   }
 }
 
@@ -228,9 +239,14 @@ export class EventQueueDataMapper {
   // this is helper object that marks last seen event so we don't process the same events over and over
   private _lastSeenEventQueueHead: Event | undefined = undefined
 
-  constructor(private readonly _symbol: string, private readonly _market: Market) {}
+  constructor(
+    private readonly _symbol: string,
+    private readonly _market: Market,
+    private readonly _priceDecimalPlaces: number,
+    private readonly _sizeDecimalPlaces: number
+  ) {}
 
-  public *map(eventQueueData: Buffer, context: Context, timestamp: number) {
+  public *map(eventQueueData: Buffer, slot: string, timestamp: number) {
     // we're interested only in newly added events since last update
     // each account update publishes 'snaphost' not 'delta' so we need to figure it out the delta on our own
     const { newlyAddedEvents, eventQueueHead } = this._getNewlyAddedEvents(eventQueueData, this._lastSeenEventQueueHead)
@@ -240,7 +256,7 @@ export class EventQueueDataMapper {
     let fillsIds: string[] = []
 
     for (const event of newlyAddedEvents) {
-      const message = this._mapEventToDataMessage(event, timestamp, context.slot, fillsIds)
+      const message = this._mapEventToDataMessage(event, timestamp, slot, fillsIds)
       if (message.type === 'fill') {
         fillsIds.push(message.orderId)
       }
@@ -248,7 +264,7 @@ export class EventQueueDataMapper {
     }
   }
 
-  private _mapEventToDataMessage(event: Event, timestamp: number, slot: number, fillsIds: string[]): Fill | Done {
+  private _mapEventToDataMessage(event: Event, timestamp: number, slot: string, fillsIds: string[]): Fill | Done {
     const clientId = (event as any).clientOrderId ? (event as any).clientOrderId.toString() : undefined
     const side = event.eventFlags.bid ? 'buy' : 'sell'
     const orderId = event.orderId.toString()
@@ -265,8 +281,8 @@ export class EventQueueDataMapper {
         orderId,
         clientId,
         side,
-        price: this._getFillPrice(event),
-        size: this._getFillSize(event),
+        price: this._getFillPrice(event).toFixed(this._priceDecimalPlaces),
+        size: this._getFillSize(event).toFixed(this._sizeDecimalPlaces),
         maker: event.eventFlags.maker,
         feeCost: this._market.quoteSplSizeToNumber(event.nativeFeeOrRebate) * (event.eventFlags.maker ? -1 : 1),
         openOrders: openOrdersAccount,

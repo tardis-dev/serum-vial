@@ -36,7 +36,7 @@ export interface Message {
 
 export interface DataMessage extends Message {
   readonly symbol: string
-  readonly slot: number
+  readonly slot: string
 }
 
 export interface ErrorResponse extends Message {
@@ -50,7 +50,7 @@ export interface SuccessResponse extends Message {
   readonly markets: string[]
 }
 
-export type PriceLevel = [number, number]
+export type PriceLevel = [string, string]
 
 export interface L2 extends DataMessage {
   readonly type: 'l2update' | 'l2snapshot'
@@ -66,16 +66,16 @@ export interface Quote extends DataMessage {
 
 export interface Trade extends DataMessage {
   readonly type: 'trade'
-  readonly price: number
-  readonly size: number
+  readonly price: string
+  readonly size: string
   readonly side: 'buy' | 'sell' // liquidity taker side
   readonly id: string
 }
 
 export interface Fill extends DataMessage {
   readonly type: 'fill'
-  readonly price: number
-  readonly size: number
+  readonly price: string
+  readonly size: string
   readonly side: 'buy' | 'sell'
   readonly maker: boolean
   readonly feeCost: number
@@ -88,7 +88,7 @@ export interface Fill extends DataMessage {
 
 export interface OrderReceived extends DataMessage {
   readonly type: 'received'
-  readonly reason: 'place' | 'cancel'
+  readonly reason: 'new' | 'cancel'
   readonly side: 'buy' | 'sell'
   readonly orderId: string
   readonly sequence: string
@@ -98,11 +98,11 @@ export interface OrderReceived extends DataMessage {
   readonly feeTier: number
 }
 
-export interface PlaceOrderReceived extends OrderReceived {
-  readonly reason: 'place'
+export interface NewOrderReceived extends OrderReceived {
+  readonly reason: 'new'
   readonly orderType: 'limit' | 'ioc' | 'postOnly'
-  readonly price: number
-  readonly size: number
+  readonly price: string
+  readonly size: string
 }
 
 export interface CancelOrderReceived extends OrderReceived {
@@ -110,8 +110,8 @@ export interface CancelOrderReceived extends OrderReceived {
 }
 
 export type OrderItem = {
-  readonly price: number
-  readonly size: number
+  readonly price: string
+  readonly size: string
   readonly side: 'buy' | 'sell'
   readonly orderId: string
   readonly clientId?: string
@@ -141,4 +141,4 @@ export interface L3Snapshot extends DataMessage {
   readonly bids: OrderItem[]
 }
 
-export type L3DataMessage = PlaceOrderReceived | CancelOrderReceived | OrderOpen | Fill | Done | L3Snapshot
+export type L3DataMessage = NewOrderReceived | CancelOrderReceived | OrderOpen | Fill | Done | L3Snapshot
