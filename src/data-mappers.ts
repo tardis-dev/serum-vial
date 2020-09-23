@@ -1,6 +1,6 @@
-import { decodeRequestQueue, Market, Orderbook } from '@project-serum/serum'
+import { EVENT_QUEUE_LAYOUT, Market, Orderbook, REQUEST_QUEUE_LAYOUT } from '@project-serum/serum'
 import { Order } from '@project-serum/serum/lib/market'
-import { decodeEventQueue, Event } from '@project-serum/serum/lib/queue'
+import { Event } from '@project-serum/serum/lib/queue'
 import BN from 'bn.js'
 import { CancelOrderReceived, Done, Fill, L3Snapshot, NewOrderReceived, OrderItem, OrderOpen, Request } from './types'
 
@@ -80,7 +80,7 @@ export class RequestQueueDataMapper {
   }
 
   private _getNewlyAddedRequests(requestQueueData: Buffer, lastSeenRequestQueueHead: Request | undefined) {
-    const queue = this._decodeRequestQueue(requestQueueData)
+    const queue: IterableIterator<Request> = decodeQueue(REQUEST_QUEUE_LAYOUT.HEADER, REQUEST_QUEUE_LAYOUT.NODE, requestQueueData)
     let requestQueueHead: Request | undefined = undefined
     const newlyAddedRequests: Request[] = []
 
@@ -107,37 +107,7 @@ export class RequestQueueDataMapper {
       newlyAddedRequests
     }
   }
-
-  private *_decodeRequestQueue(data: Buffer): IterableIterator<Request> {
-    // TODO: this is far from ideal workaround for serum.js not providing iterator over request queue
-    // but essentially we don't want to decode full queue if not needed
-    // TODO: open issue in serum.js to support it natively without that ugly hack?
-    const peek = decodeRequestQueue(data, 1)
-    if (peek.length === 0) {
-      return
     }
-
-    yield peek[0]
-
-    const smallDecode = decodeRequestQueue(data, 10)
-    for (let i = 1; i < smallDecode.length; i++) {
-      yield smallDecode[i]
-    }
-
-    if (smallDecode.length === 10) {
-      const largeDecode = decodeRequestQueue(data, 200)
-      for (let i = 10; i < largeDecode.length; i++) {
-        yield largeDecode[i]
-      }
-      if (largeDecode.length === 200) {
-        const largestDecode = decodeRequestQueue(data, 20000)
-        for (let i = 200; i < largestDecode.length; i++) {
-          yield largestDecode[i]
-        }
-      }
-    }
-  }
-}
 
 export class AsksBidsDataMapper {
   private _localAsks: Order[] | undefined = undefined
@@ -338,7 +308,7 @@ export class EventQueueDataMapper {
     // TODO: is there a better way to process only new events since last update
     // as currently we're remembering last update queue head item and compare to that
 
-    const queue = this._decodeEventQueue(eventQueueData)
+    const queue: IterableIterator<Event> = decodeQueue(EVENT_QUEUE_LAYOUT.HEADER, EVENT_QUEUE_LAYOUT.NODE, eventQueueData)
     let eventQueueHead: Event | undefined = undefined
     const newlyAddedEvents: Event[] = []
 
@@ -363,44 +333,6 @@ export class EventQueueDataMapper {
     return {
       eventQueueHead,
       newlyAddedEvents
-    }
-  }
-
-  private *_decodeEventQueue(data: Buffer): IterableIterator<Event> {
-    // TODO: this is far from ideal workaround for serum.js not providing iterator over event queue
-    // but essentially we don't want to decode full queue if not needed
-
-    const peek = decodeEventQueue(data, 1)
-    if (peek.length === 0) {
-      return
-    }
-
-    yield peek[0]
-
-    const smallDecode = decodeEventQueue(data, 10)
-    for (let i = 1; i < smallDecode.length; i++) {
-      yield smallDecode[i]
-    }
-
-    if (smallDecode.length === 10) {
-      const largeDecode = decodeEventQueue(data, 200)
-      for (let i = 10; i < largeDecode.length; i++) {
-        yield largeDecode[i]
-      }
-
-      if (largeDecode.length === 200) {
-        const largestDecode = decodeEventQueue(data, 2000)
-        for (let i = 200; i < largestDecode.length; i++) {
-          yield largestDecode[i]
-        }
-
-        if (largestDecode.length === 2000) {
-          let ultimateDecode = decodeEventQueue(data, 100000)
-          for (let i = 2000; i < ultimateDecode.length; i++) {
-            yield ultimateDecode[i]
-          }
-        }
-      }
     }
   }
 }
@@ -470,4 +402,18 @@ function divideBnToNumber(numerator: BN, denominator: BN): number {
   const rem = numerator.umod(denominator)
   const gcd = rem.gcd(denominator)
   return quotient + rem.div(gcd).toNumber() / denominator.div(gcd).toNumber()
+}
+
+// modified version of https://github.com/project-serum/serum-js/blob/master/src/queue.ts#L87
+// that returns iterator instead of array
+function* decodeQueue(headerLayout: any, nodeLayout: any, buffer: Buffer) {
+  const header = headerLayout.decode(buffer)
+  const allocLen = Math.floor((buffer.length - headerLayout.span) / nodeLayout.span)
+
+  for (let i = 0; i < allocLen; ++i) {
+    const nodeIndex = (header.head + header.count + allocLen - 1 - i) % allocLen
+    const decodedIndex = nodeLayout.decode(buffer, headerLayout.span + nodeIndex * nodeLayout.span)
+
+    yield decodedIndex
+  }
 }
