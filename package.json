@@ -37,7 +37,7 @@
   ],
   "license": "MPL-2.0",
   "dependencies": {
-    "@project-serum/serum": "^0.12.17",
+    "@project-serum/serum": "github:thaaddeus/serum-js#master",
     "@solana/web3.js": "^0.76.0",
     "@types/bintrees": "^1.0.2",
     "@types/bn.js": "^4.11.6",
@@ -46,7 +46,7 @@
     "debug": "^4.2.0",
     "didyoumean2": "^4.1.0",
     "is-docker": "^2.1.1",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v18.4.0",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v18.5.0",
     "yargs": "^16.0.3"
   },
   "devDependencies": {

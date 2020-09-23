@@ -16,7 +16,7 @@ export async function bootServer({ port, nodeEndpoint }: BootOptions) {
   const WORKERS_COUNT = os.platform() === 'linux' ? os.cpus().length : 1
 
   const workers = [...Array(WORKERS_COUNT).keys()].map(() => {
-    const serumMachineMinion = new Worker(path.resolve(__dirname, 'minion.js'), { workerData: { port } })
+    const serumMachineMinion = new Worker(path.resolve(__dirname, 'minion.js'), { workerData: { nodeEndpoint, port } })
 
     serumMachineMinion.on('error', (err) => {
       debug('minion worker:%d error occured, %o', serumMachineMinion.threadId, err)

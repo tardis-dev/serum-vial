@@ -101,23 +101,24 @@ Accepts no params and returns supported Serum markets.
 
 ```json
 [
-  {
-    "name": "ALEPH/USDT",
-    "address": "EmCzMQfXMgNHcnRoFwAdPe1i2SuiSzMj1mx6wu3KN2uA",
-    "programId": "4ckmDgGdxQoPDLUkDT3vHgSAkzA3QRdNq5ywwY4sUSJn",
-    "deprecated": false
-  },
-  {
-    "name": "ALEPH/USDC",
-    "address": "B37pZmwrwXHjpgvd9hHDAx1yeDsNevTnbbrN9W12BoGK",
-    "programId": "4ckmDgGdxQoPDLUkDT3vHgSAkzA3QRdNq5ywwY4sUSJn",
-    "deprecated": false
-  },
-  {
+ {
     "name": "BTC/USDT",
-    "address": "8AcVjMG2LTbpkjNoyq8RwysokqZunkjy3d5JDzxC6BJa",
-    "programId": "4ckmDgGdxQoPDLUkDT3vHgSAkzA3QRdNq5ywwY4sUSJn",
-    "deprecated": false
+    "address": "EXnGBBSamqzd3uxEdRLUiYzjJkTwQyorAaFXdfteuGXe",
+    "programId": "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o",
+    "tickSize": 0.1,
+    "minOrderSize": 0.0001,
+    "supportsReferralFees": true,
+    "supportsSrmFeeDiscounts": true
+  },
+  {
+    "name": "BTC/USDC",
+    "address": "5LgJphS6D5zXwUVPU7eCryDBkyta3AidrJ5vjNU6BcGW",
+    "programId": "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o",
+    "tickSize": 0.1,
+    "minOrderSize": 0.0001,
+    "supportsReferralFees": true,
+    "supportsSrmFeeDiscounts": true
   }
+  ...
 ]
 ```

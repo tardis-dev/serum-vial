@@ -19,7 +19,7 @@ process.on('unhandledRejection', (err) => {
   throw err
 })
 
-const { port } = workerData as { port: number }
+const { port, nodeEndpoint } = workerData as { port: number; nodeEndpoint: string }
 
 // Minion is the actual HTTP and WS server implementation
 // it is mean to run in Node.js worker_thread and handles:
@@ -30,8 +30,7 @@ const { port } = workerData as { port: number }
 class Minion {
   private readonly _server: TemplatedApp
   private _apiVersion = '1'
-
-  constructor() {
+  constructor(private readonly _nodeEndpoint: string) {
     this._server = this._initServer()
   }
 
@@ -47,7 +46,7 @@ class Minion {
           this._handleSubscriptionRequest(ws, message)
         }
       })
-      .get(`${apiPrefix}/markets`, listMarkets)
+      .get(`${apiPrefix}/markets`, listMarkets(this._nodeEndpoint))
   }
 
   public async start(port: number) {
@@ -179,7 +178,7 @@ class Minion {
   }
 }
 
-const minion = new Minion()
+const minion = new Minion(nodeEndpoint)
 
 minion.start(port).then(() => {
   parentPort!.on('message', (message) => {
