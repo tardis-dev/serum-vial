@@ -21,6 +21,7 @@ async function getListMarketsResponse(nodeEndpoint: string) {
 
       return {
         symbol: market.name,
+        deprecated: market.deprecated,
         address: market.address.toString(),
         programId: market.programId.toString(),
         tickSize,

@@ -103,6 +103,7 @@ Accepts no params and returns supported Serum markets.
 [
  {
     "symbol": "BTC/USDT",
+    "deprecated": false,
     "address": "EXnGBBSamqzd3uxEdRLUiYzjJkTwQyorAaFXdfteuGXe",
     "programId": "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o",
     "tickSize": 0.1,
@@ -112,6 +113,7 @@ Accepts no params and returns supported Serum markets.
   },
   {
     "symbol": "BTC/USDC",
+    "deprecated": false,
     "address": "5LgJphS6D5zXwUVPU7eCryDBkyta3AidrJ5vjNU6BcGW",
     "programId": "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o",
     "tickSize": 0.1,
