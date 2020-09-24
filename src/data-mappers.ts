@@ -2,7 +2,7 @@ import { EVENT_QUEUE_LAYOUT, Market, Orderbook, REQUEST_QUEUE_LAYOUT } from '@pr
 import { Order } from '@project-serum/serum/lib/market'
 import { Event } from '@project-serum/serum/lib/queue'
 import BN from 'bn.js'
-import { CancelOrderReceived, Done, Fill, L3Snapshot, NewOrderReceived, OrderItem, OrderOpen, Request } from './types'
+import { CancelOrderReceived, Done, EventQueueHeader, Fill, L3Snapshot, NewOrderReceived, OrderItem, OrderOpen, Request } from './types'
 
 // Data mappers responsibility is to map DEX accounts data to L3 messages
 export class RequestQueueDataMapper {
@@ -36,6 +36,7 @@ export class RequestQueueDataMapper {
     const openOrdersAccount = request.openOrders.toString()
     const openOrdersSlot = request.openOrdersSlot
     const feeTier = request.feeTier
+    const price = this._market.priceLotsToNumber(request.orderId.ushrn(64)).toFixed(this._priceDecimalPlaces)
 
     if (request.requestFlags.cancelOrder) {
       const cancelOrderReceived: CancelOrderReceived = {
@@ -47,6 +48,7 @@ export class RequestQueueDataMapper {
         clientId: clientId,
         side,
         sequence: request.maxBaseSizeOrCancelId.toString(),
+        price,
         reason: 'cancel',
         openOrders: openOrdersAccount,
         openOrdersSlot,
@@ -66,7 +68,7 @@ export class RequestQueueDataMapper {
         clientId: clientId,
         side,
         sequence: sequenceNumber.toString(),
-        price: this._market.priceLotsToNumber(request.orderId.ushrn(64)).toFixed(this._priceDecimalPlaces),
+        price,
         size: this._market.baseSizeLotsToNumber(request.maxBaseSizeOrCancelId).toFixed(this._sizeDecimalPlaces),
         orderType: request.requestFlags.ioc ? 'ioc' : request.requestFlags.postOnly ? 'postOnly' : 'limit',
         reason: 'new',
@@ -80,7 +82,7 @@ export class RequestQueueDataMapper {
   }
 
   private _getNewlyAddedRequests(requestQueueData: Buffer, lastSeenRequestQueueHead: Request | undefined) {
-    const queue: IterableIterator<Request> = decodeQueue(REQUEST_QUEUE_LAYOUT.HEADER, REQUEST_QUEUE_LAYOUT.NODE, requestQueueData)
+    const queue = this._decodeRequestQueue(requestQueueData)
     let requestQueueHead: Request | undefined = undefined
     const newlyAddedRequests: Request[] = []
 
@@ -94,11 +96,13 @@ export class RequestQueueDataMapper {
         break
       }
 
+      // stop when we've found item that was queue head for last update
       if (requestsEqual(lastSeenRequestQueueHead, request)) {
         break
       }
 
-      // _decodeRequestQueue returns requests from newest to oldest, we should publish messages from oldest from newest
+      // _decodeRequestQueue returns requests from newest to oldest
+      // but we should return newly added requests from oldest to newest
       newlyAddedRequests.unshift(request)
     }
 
@@ -107,7 +111,23 @@ export class RequestQueueDataMapper {
       newlyAddedRequests
     }
   }
+
+  // modified version of https://github.com/project-serum/serum-js/blob/master/src/queue.ts#L87
+  // that returns iterator instead of array
+  private *_decodeRequestQueue(buffer: Buffer): IterableIterator<Request> {
+    const { HEADER, NODE } = REQUEST_QUEUE_LAYOUT
+    const header = HEADER.decode(buffer)
+
+    const allocLen = Math.floor((buffer.length - HEADER.span) / NODE.span)
+
+    for (let i = 0; i < allocLen; ++i) {
+      const nodeIndex = (header.head + header.count + allocLen - 1 - i) % allocLen
+      const decodedItem = NODE.decode(buffer, HEADER.span + nodeIndex * NODE.span)
+
+      yield decodedItem
     }
+  }
+}
 
 export class AsksBidsDataMapper {
   private _localAsks: Order[] | undefined = undefined
@@ -206,8 +226,7 @@ export class AsksBidsDataMapper {
 }
 
 export class EventQueueDataMapper {
-  // this is helper object that marks last seen event so we don't process the same events over and over
-  private _lastSeenEventQueueHead: Event | undefined = undefined
+  private _lastSeenSeqNum: number | undefined = undefined
 
   constructor(
     private readonly _symbol: string,
@@ -219,22 +238,22 @@ export class EventQueueDataMapper {
   public *map(eventQueueData: Buffer, slot: string, timestamp: number) {
     // we're interested only in newly added events since last update
     // each account update publishes 'snaphost' not 'delta' so we need to figure it out the delta on our own
-    const { newlyAddedEvents, eventQueueHead } = this._getNewlyAddedEvents(eventQueueData, this._lastSeenEventQueueHead)
 
-    // assign last seen head to current queue head
-    this._lastSeenEventQueueHead = eventQueueHead
     let fillsIds: string[] = []
-
-    for (const event of newlyAddedEvents) {
+    for (const event of this._getNewlyAddedEvents(eventQueueData)) {
       const message = this._mapEventToDataMessage(event, timestamp, slot, fillsIds)
+      if (message === undefined) {
+        continue
+      }
       if (message.type === 'fill') {
         fillsIds.push(message.orderId)
       }
+
       yield message
     }
   }
 
-  private _mapEventToDataMessage(event: Event, timestamp: number, slot: string, fillsIds: string[]): Fill | Done {
+  private _mapEventToDataMessage(event: Event, timestamp: number, slot: string, fillsIds: string[]): Fill | Done | undefined {
     const clientId = (event as any).clientOrderId ? (event as any).clientOrderId.toString() : undefined
     const side = event.eventFlags.bid ? 'buy' : 'sell'
     const orderId = event.orderId.toString()
@@ -261,9 +280,15 @@ export class EventQueueDataMapper {
       }
 
       return fillMessage
-    } else {
-      // order is done, there won't be any more messages for it
-      // it means order is no longer in the order book or was immediately filled
+    } else if (event.nativeQuantityPaid.eqn(0)) {
+      // we can use nativeQuantityStillLocked === 0 to detect if order is 'done'
+      // this is what the dex uses at event processing time to decide if it can release the slot in an OpenOrders account.
+      // done means that there won't be any more messages for the order (is no longer in the order book or never was - cancelled, ioc)
+
+      // for 'out' events:
+      // - nativeQuantityPaid = nativeQuantityStillLocked
+      // - nativeQuantityReleased = nativeQuantityUnlocked
+
       const doneMessage: Done = {
         type: 'done',
         symbol: this._symbol,
@@ -280,6 +305,8 @@ export class EventQueueDataMapper {
 
       return doneMessage
     }
+
+    return
   }
 
   private _getFillSize(event: Event) {
@@ -304,36 +331,27 @@ export class EventQueueDataMapper {
     return price
   }
 
-  private _getNewlyAddedEvents(eventQueueData: Buffer, lastSeenEventQueueHead: Event | undefined) {
-    // TODO: is there a better way to process only new events since last update
-    // as currently we're remembering last update queue head item and compare to that
+  private *_getNewlyAddedEvents(eventQueueData: Buffer) {
+    const { HEADER, NODE } = EVENT_QUEUE_LAYOUT
+    const header = HEADER.decode(eventQueueData) as EventQueueHeader
 
-    const queue: IterableIterator<Event> = decodeQueue(EVENT_QUEUE_LAYOUT.HEADER, EVENT_QUEUE_LAYOUT.NODE, eventQueueData)
-    let eventQueueHead: Event | undefined = undefined
-    const newlyAddedEvents: Event[] = []
+    // based on seqNum provided by event queue we can calculate how many events have been added
+    // to the queue since last update (header.seqNum - _lastSeenSeqNum)
+    // if we don't have stored _lastSeenSeqNum it means it's first notification so let's just initialize _lastSeenSeqNum
+    if (this._lastSeenSeqNum !== undefined) {
+      const allocLen = Math.floor((eventQueueData.length - HEADER.span) / NODE.span)
 
-    for (const event of queue) {
-      // set new queue head to temp variable
-      if (eventQueueHead === undefined) {
-        eventQueueHead = event
+      const newEventsCount = header.seqNum - this._lastSeenSeqNum
+
+      for (let i = newEventsCount; i > 0; --i) {
+        const nodeIndex = (header.head + header.count - i) % allocLen
+        const decodedItem = NODE.decode(eventQueueData, HEADER.span + nodeIndex * NODE.span) as Event
+
+        yield decodedItem
       }
-      // not yet initialized, do not process remaining queue items
-      if (lastSeenEventQueueHead === undefined) {
-        break
-      }
-
-      if (eventsEqual(lastSeenEventQueueHead, event)) {
-        break
-      }
-
-      // queue returns events from newest to oldest, we should publish messages from oldest from newest
-      newlyAddedEvents.unshift(event)
     }
 
-    return {
-      eventQueueHead,
-      newlyAddedEvents
-    }
+    this._lastSeenSeqNum = header.seqNum
   }
 }
 
@@ -351,50 +369,6 @@ function requestsEqual(request1: Request, request2: Request) {
   }
 }
 
-function eventsEqual(event1: Event, event2: Event) {
-  if (event1.orderId.eq(event2.orderId) === false) {
-    return false
-  }
-
-  if (event1.openOrdersSlot !== event2.openOrdersSlot) {
-    return false
-  }
-
-  if (event1.openOrders.equals(event2.openOrders) === false) {
-    return false
-  }
-  if (event1.nativeQuantityReleased.eq(event2.nativeQuantityReleased) === false) {
-    return false
-  }
-
-  if (event1.nativeQuantityPaid.eq(event2.nativeQuantityPaid) === false) {
-    return false
-  }
-  if (event1.nativeFeeOrRebate.eq(event2.nativeFeeOrRebate) === false) {
-    return false
-  }
-  if (event1.feeTier !== event2.feeTier) {
-    return false
-  }
-  if (event1.eventFlags.bid !== event2.eventFlags.bid) {
-    return false
-  }
-
-  if (event1.eventFlags.fill !== event2.eventFlags.fill) {
-    return false
-  }
-
-  if (event1.eventFlags.maker !== event2.eventFlags.maker) {
-    return false
-  }
-
-  if (event1.eventFlags.out !== event2.eventFlags.out) {
-    return false
-  }
-
-  return true
-}
-
 // copy of https://github.com/project-serum/serum-js/blob/master/src/market.ts#L1325
 // ideally serum.js should export it
 function divideBnToNumber(numerator: BN, denominator: BN): number {
@@ -402,18 +376,4 @@ function divideBnToNumber(numerator: BN, denominator: BN): number {
   const rem = numerator.umod(denominator)
   const gcd = rem.gcd(denominator)
   return quotient + rem.div(gcd).toNumber() / denominator.div(gcd).toNumber()
-}
-
-// modified version of https://github.com/project-serum/serum-js/blob/master/src/queue.ts#L87
-// that returns iterator instead of array
-function* decodeQueue(headerLayout: any, nodeLayout: any, buffer: Buffer) {
-  const header = headerLayout.decode(buffer)
-  const allocLen = Math.floor((buffer.length - headerLayout.span) / nodeLayout.span)
-
-  for (let i = 0; i < allocLen; ++i) {
-    const nodeIndex = (header.head + header.count + allocLen - 1 - i) % allocLen
-    const decodedIndex = nodeLayout.decode(buffer, headerLayout.span + nodeIndex * nodeLayout.span)
-
-    yield decodedIndex
-  }
 }

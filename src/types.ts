@@ -23,6 +23,12 @@ export type Request = {
   clientOrderId?: BN
 }
 
+export type EventQueueHeader = {
+  seqNum: number
+  head: number
+  count: number
+}
+
 export type SubRequest = {
   readonly op: Op
   readonly channel: Channel
@@ -93,6 +99,7 @@ export interface OrderReceived extends DataMessage {
   readonly orderId: string
   readonly sequence: string
   readonly clientId?: string
+  readonly price: string
   readonly openOrders: string
   readonly openOrdersSlot: number
   readonly feeTier: number
@@ -101,7 +108,7 @@ export interface OrderReceived extends DataMessage {
 export interface NewOrderReceived extends OrderReceived {
   readonly reason: 'new'
   readonly orderType: 'limit' | 'ioc' | 'postOnly'
-  readonly price: string
+
   readonly size: string
 }
 
