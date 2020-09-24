@@ -15,18 +15,6 @@ export const MESSAGE_TYPES_PER_CHANNEL: { [key in Channel]: readonly MessageType
   level3: LEVEL3_MESSAGE_TYPES
 }
 
-export const MARKETS_SYMBOLS = MARKETS.map((m) => m.name)
-
-export const MARKETS_LIST = MARKETS.filter((m) => m.deprecated === false)
-
-// WS pubsub system uses MQTT syntax for which '/' '+' and '#' are special characters
-// let's make sure we don't have those in provided market names when used as pub/sub topics
-export const PUB_TOPIC_NAME_FOR_MARKET: { [key: string]: string } = {}
-
-for (const market of MARKETS_SYMBOLS) {
-  PUB_TOPIC_NAME_FOR_MARKET[market] = market.replace(/[^\w]/gi, '')
-}
-
 export type Channel = typeof CHANNELS[number]
 export type Op = typeof OPS[number]
 export type MessageType =

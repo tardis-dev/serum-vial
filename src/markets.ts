@@ -1,7 +1,6 @@
-import { Market } from '@project-serum/serum'
+import { Market, MARKETS } from '@project-serum/serum'
 import { Connection } from '@solana/web3.js'
 import { HttpResponse } from 'uWebSockets.js'
-import { MARKETS_LIST } from './consts'
 
 let cachedListMarketsResponse: string | undefined
 
@@ -11,7 +10,7 @@ async function getListMarketsResponse(nodeEndpoint: string) {
   }
 
   const markets = await Promise.all(
-    MARKETS_LIST.map(async (market) => {
+    MARKETS.map(async (market) => {
       const connection = new Connection(nodeEndpoint)
       const { tickSize, minOrderSize, supportsReferralFees, supportsSrmFeeDiscounts } = await Market.load(
         connection,
@@ -21,7 +20,7 @@ async function getListMarketsResponse(nodeEndpoint: string) {
       )
 
       return {
-        name: market.name,
+        symbol: market.name,
         address: market.address.toString(),
         programId: market.programId.toString(),
         tickSize,

@@ -1,10 +1,13 @@
+import { MARKETS } from '@project-serum/serum'
 import { App, SHARED_COMPRESSOR, TemplatedApp, WebSocket } from 'uWebSockets.js'
 import { isMainThread, parentPort, threadId, workerData } from 'worker_threads'
-import { CHANNELS, MARKETS_SYMBOLS, MESSAGE_TYPES_PER_CHANNEL, OPS, PUB_TOPIC_NAME_FOR_MARKET } from './consts'
+import { CHANNELS, MESSAGE_TYPES_PER_CHANNEL, OPS } from './consts'
 import { createDebugLogger } from './debug'
 import { getAllowedValuesText, getDidYouMean } from './helpers'
 import { listMarkets } from './markets'
 import { DataMessage, ErrorResponse, SubRequest, SuccessResponse } from './types'
+
+export const MARKETS_ADDRESSES = MARKETS.map((m) => m.address.toString())
 
 const debug = createDebugLogger(`minion:${threadId}`)
 
@@ -95,11 +98,10 @@ class Minion {
 
       for (const type of requestedTypes) {
         for (const market of request.markets) {
-          const safeMarketName = PUB_TOPIC_NAME_FOR_MARKET[market]
           if (request.op === 'subscribe') {
-            ws.subscribe(`${type}/${safeMarketName}`)
+            ws.subscribe(`${type}/${market}`)
           } else {
-            ws.unsubscribe(`${type}/${safeMarketName}`)
+            ws.unsubscribe(`${type}/${market}`)
           }
         }
       }
@@ -155,18 +157,18 @@ class Minion {
       } as const
     }
 
-    if (payload.markets.length > 50) {
+    if (payload.markets.length > 40) {
       return {
         isValid: false,
-        error: `Too large markets array provided (> 50 items).`
+        error: `Too large markets array provided (> 40 items).`
       } as const
     }
 
     for (const market of payload.markets) {
-      if (MARKETS_SYMBOLS.includes(market) === false) {
+      if (MARKETS_ADDRESSES.includes(market) === false) {
         return {
           isValid: false,
-          error: `Invalid market provided: '${market}'.${getDidYouMean(market, MARKETS_SYMBOLS)}.`
+          error: `Invalid market address provided: '${market}'.`
         } as const
       }
     }

@@ -42,6 +42,7 @@ export interface Message {
 
 export interface DataMessage extends Message {
   readonly symbol: string
+  readonly market: string
   readonly slot: string
 }
 

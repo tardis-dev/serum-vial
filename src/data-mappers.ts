@@ -8,13 +8,16 @@ import { CancelOrderReceived, Done, EventQueueHeader, Fill, L3Snapshot, NewOrder
 export class RequestQueueDataMapper {
   // this is helper object that marks last seen request so we don't process the same requests over and over
   private _lastSeenRequestQueueHead: Request | undefined = undefined
+  private readonly _marketAddress: string
 
   constructor(
     private readonly _symbol: string,
     private readonly _market: Market,
     private readonly _priceDecimalPlaces: number,
     private readonly _sizeDecimalPlaces: number
-  ) {}
+  ) {
+    this._marketAddress = this._market.address.toString()
+  }
 
   public *map(requestQueueData: Buffer, slot: string, timestamp: number) {
     // we're interested only in newly added requests to queue since last update
@@ -41,6 +44,7 @@ export class RequestQueueDataMapper {
     if (request.requestFlags.cancelOrder) {
       const cancelOrderReceived: CancelOrderReceived = {
         type: 'received',
+        market: this._marketAddress,
         symbol: this._symbol,
         timestamp: timestamp,
         slot,
@@ -61,6 +65,7 @@ export class RequestQueueDataMapper {
 
       const newOrderReceived: NewOrderReceived = {
         type: 'received',
+        market: this._marketAddress,
         symbol: this._symbol,
         timestamp: timestamp,
         slot,
@@ -133,13 +138,16 @@ export class AsksBidsDataMapper {
   private _localAsks: Order[] | undefined = undefined
   private _localBids: Order[] | undefined = undefined
   private _initialized = false
+  private readonly _marketAddress: string
 
   constructor(
     private readonly _symbol: string,
     private readonly _market: Market,
     private readonly _priceDecimalPlaces: number,
     private readonly _sizeDecimalPlaces: number
-  ) {}
+  ) {
+    this._marketAddress = this._market.address.toString()
+  }
 
   public *map(asksAccountData: Buffer | undefined, bidsAccountData: Buffer | undefined, slot: string, timestamp: number) {
     // TODO: perhaps this can be more optimized to not allocate new Order array each time if too slow in practice
@@ -181,6 +189,7 @@ export class AsksBidsDataMapper {
 
       const l3Snapshot: L3Snapshot = {
         type: 'l3snapshot',
+        market: this._marketAddress,
         symbol: this._symbol,
         timestamp,
         slot,
@@ -195,6 +204,7 @@ export class AsksBidsDataMapper {
   private _mapToOpenMessage(order: Order, timestamp: number, slot: string): OrderOpen {
     return {
       type: 'open',
+      market: this._marketAddress,
       symbol: this._symbol,
       timestamp,
       slot,
@@ -227,13 +237,16 @@ export class AsksBidsDataMapper {
 
 export class EventQueueDataMapper {
   private _lastSeenSeqNum: number | undefined = undefined
+  private readonly _marketAddress: string
 
   constructor(
     private readonly _symbol: string,
     private readonly _market: Market,
     private readonly _priceDecimalPlaces: number,
     private readonly _sizeDecimalPlaces: number
-  ) {}
+  ) {
+    this._marketAddress = this._market.address.toString()
+  }
 
   public *map(eventQueueData: Buffer, slot: string, timestamp: number) {
     // we're interested only in newly added events since last update
@@ -264,6 +277,7 @@ export class EventQueueDataMapper {
     if (event.eventFlags.fill) {
       const fillMessage: Fill = {
         type: 'fill',
+        market: this._marketAddress,
         symbol: this._symbol,
         timestamp,
         slot,
@@ -291,6 +305,7 @@ export class EventQueueDataMapper {
 
       const doneMessage: Done = {
         type: 'done',
+        market: this._marketAddress,
         symbol: this._symbol,
         timestamp,
         slot,

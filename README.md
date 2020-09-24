@@ -79,7 +79,7 @@ ws.onopen = () => {
   const subscribePayload = {
     op: 'subscribe',
     channel: 'trades',
-    markets: ['BTC/USDT', 'SRM/USDT']
+    markets: ['EXnGBBSamqzd3uxEdRLUiYzjJkTwQyorAaFXdfteuGXe', '5abZGhrELnUnfM9ZUnvK6XJPoBU5eShZwfFPkdhAC7o']
   }
 
   ws.send(JSON.stringify(subscribePayload))
@@ -102,7 +102,7 @@ Accepts no params and returns supported Serum markets.
 ```json
 [
  {
-    "name": "BTC/USDT",
+    "symbol": "BTC/USDT",
     "address": "EXnGBBSamqzd3uxEdRLUiYzjJkTwQyorAaFXdfteuGXe",
     "programId": "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o",
     "tickSize": 0.1,
@@ -111,7 +111,7 @@ Accepts no params and returns supported Serum markets.
     "supportsSrmFeeDiscounts": true
   },
   {
-    "name": "BTC/USDC",
+    "symbol": "BTC/USDC",
     "address": "5LgJphS6D5zXwUVPU7eCryDBkyta3AidrJ5vjNU6BcGW",
     "programId": "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o",
     "tickSize": 0.1,
