@@ -19,6 +19,7 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "incremental": true,
-    "lib": ["es2017", "dom"]
+    "lib": ["es2017", "dom", "WebWorker"],
+    "noUncheckedIndexedAccess": true
   }
 }

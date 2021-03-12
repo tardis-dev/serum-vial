@@ -1,27 +1,4 @@
-import { PublicKey } from '@solana/web3.js'
-import BN from 'bn.js'
 import { Op, Channel, MessageType } from './consts'
-
-export type AccountName = 'bids' | 'asks' | 'requestQueue' | 'eventQueue'
-export type AccountsData = { [key in AccountName]: Buffer | undefined }
-
-export type Request = {
-  requestFlags: {
-    newOrder: boolean
-    cancelOrder: boolean
-    bid: boolean
-    postOnly: boolean
-    ioc: boolean
-  }
-
-  openOrdersSlot: number
-  feeTier: number
-  maxBaseSizeOrCancelId: BN
-  nativeQuoteQuantityLocked: BN
-  orderId: BN
-  openOrders: PublicKey
-  clientOrderId?: BN
-}
 
 export type EventQueueHeader = {
   seqNum: number
@@ -93,30 +70,6 @@ export interface Fill extends DataMessage {
   readonly feeTier: number
 }
 
-export interface OrderReceived extends DataMessage {
-  readonly type: 'received'
-  readonly reason: 'new' | 'cancel'
-  readonly side: 'buy' | 'sell'
-  readonly orderId: string
-  readonly sequence: string
-  readonly clientId?: string
-  readonly price: string
-  readonly openOrders: string
-  readonly openOrdersSlot: number
-  readonly feeTier: number
-}
-
-export interface NewOrderReceived extends OrderReceived {
-  readonly reason: 'new'
-  readonly orderType: 'limit' | 'ioc' | 'postOnly'
-
-  readonly size: string
-}
-
-export interface CancelOrderReceived extends OrderReceived {
-  readonly reason: 'cancel'
-}
-
 export type OrderItem = {
   readonly price: string
   readonly size: string
@@ -143,10 +96,32 @@ export interface Done extends DataMessage {
   readonly feeTier: number
 }
 
+export interface Change extends DataMessage {
+  readonly type: 'change'
+  readonly newSize: string
+  readonly side: 'buy' | 'sell'
+  readonly orderId: string
+  readonly clientId?: string
+  readonly openOrders: string
+  readonly openOrdersSlot: number
+  readonly feeTier: number
+}
+
 export interface L3Snapshot extends DataMessage {
   readonly type: 'l3snapshot'
   readonly asks: OrderItem[]
   readonly bids: OrderItem[]
 }
 
-export type L3DataMessage = NewOrderReceived | CancelOrderReceived | OrderOpen | Fill | Done | L3Snapshot
+export type L3DataMessage = OrderOpen | Fill | Done | L3Snapshot
+
+export type SerumListMarketItem = {
+  symbol: string
+  address: string
+  programId: string
+  tickSize: number
+  minOrderSize: number
+  deprecated: boolean
+  supportsReferralFees: boolean
+  supportsSrmFeeDiscounts: boolean
+}

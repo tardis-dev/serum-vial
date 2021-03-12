@@ -1,1 +1,2 @@
-export { bootServer } from './boot-server'
+export { bootServer } from './boot_server'
+export { logger } from './logger'

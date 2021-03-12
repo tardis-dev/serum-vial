@@ -6,9 +6,10 @@ const pkg = require('../package.json')
 
 const DEFAULT_PORT = 8000
 const DEFAULT_NODE_ENDPOINT = 'https://solana-api.projectserum.com'
+
 const argv = yargs
-  .scriptName('serum-machine')
-  .env('SM_')
+  .scriptName('serum-vial')
+  .env('SV_')
   .strict()
 
   .option('port', {
@@ -23,9 +24,15 @@ const argv = yargs
     default: DEFAULT_NODE_ENDPOINT
   })
 
-  .option('debug', {
-    type: 'boolean',
+  .option('log-level', {
+    type: 'string',
     describe: 'Enable debug logs.',
+    choices: ['debug', 'info', 'warn', 'error'],
+    default: 'error'
+  })
+  .option('test-mode', {
+    type: 'boolean',
+    describe: 'Enable test mode with full order book snapshots for each update',
     default: false
   })
 
@@ -33,32 +40,30 @@ const argv = yargs
   .version()
   .usage('$0 [options]')
   .example(`$0 --endpoint ${DEFAULT_NODE_ENDPOINT}`)
-  .epilogue('See https://github.com/tardis-dev/serum-machine for more information.')
+  .epilogue('See https://github.com/tardis-dev/serum-vial for more information.')
   .detectLocale(false).argv
 
 // if port ENV is defined use it otherwise use provided options
 const port = process.env.PORT ? +process.env.PORT : argv['port']
-const enableDebug = argv['debug']
 
-if (enableDebug) {
-  process.env.DEBUG = 'serum-machine*'
-}
+const { bootServer, logger } = require('../dist')
 
-const { bootServer } = require('../dist')
+logger.level = argv['log-level']
 
 async function start() {
   await bootServer({
     port,
-    nodeEndpoint: argv['endpoint']
+    nodeEndpoint: argv['endpoint'],
+    testMode: argv['test-mode']
   })
 
-  if (isDocker() && !process.env.RUNKIT_HOST) {
-    console.log(`Serum Machine v${pkg.version} is running inside Docker container`)
+  if (isDocker()) {
+    logger.info(`Serum vial v${pkg.version} is running inside Docker container`)
   } else {
-    console.log(`Serum Machine v${pkg.version} is running on port ${port}`)
+    logger.info(`Serum vial server v${pkg.version} is running on port ${port}`)
   }
 
-  console.log(`See https://github.com/tardis-dev/serum-machine for more information.`)
+  logger.info(`See https://github.com/tardis-dev/serum-vial for more information.`)
 }
 
 start()

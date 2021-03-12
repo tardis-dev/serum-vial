@@ -1,19 +1,21 @@
-import { MARKETS } from '@project-serum/serum'
-import { App, SHARED_COMPRESSOR, TemplatedApp, WebSocket } from 'uWebSockets.js'
-import { isMainThread, parentPort, threadId, workerData } from 'worker_threads'
+import { Market } from '@project-serum/serum'
+import { Connection } from '@solana/web3.js'
+import { App, HttpRequest, HttpResponse, SHARED_COMPRESSOR, TemplatedApp, WebSocket } from 'uWebSockets.js'
+import { isMainThread, threadId, workerData } from 'worker_threads'
 import { CHANNELS, MESSAGE_TYPES_PER_CHANNEL, OPS } from './consts'
-import { createDebugLogger } from './debug'
-import { getAllowedValuesText, getDidYouMean } from './helpers'
-import { listMarkets } from './markets'
-import { DataMessage, ErrorResponse, SubRequest, SuccessResponse } from './types'
+import { CircularBuffer, getAllowedValuesText, getDidYouMean, minionReadyChannel, serumDataChannel } from './helpers'
+import { logger } from './logger'
+import { ACTIVE_MARKETS, ACTIVE_MARKETS_NAMES } from './markets'
+import { MessageEnvelope } from './serum_producer'
+import { ErrorResponse, SerumListMarketItem, SubRequest, SuccessResponse } from './types'
 
-export const MARKETS_ADDRESSES = MARKETS.map((m) => m.address.toString())
-
-const debug = createDebugLogger(`minion:${threadId}`)
+logger.defaultMeta = {
+  minionId: threadId
+}
 
 if (isMainThread) {
-  const message = 'existing, minion is not meant to run in main thread'
-  debug(message)
+  const message = 'Exiting. Worker is not meant to run in main thread'
+  logger.error(message)
 
   throw new Error(message)
 }
@@ -22,10 +24,26 @@ process.on('unhandledRejection', (err) => {
   throw err
 })
 
-const { port, nodeEndpoint } = workerData as { port: number; nodeEndpoint: string }
+// based on https://github.com/uNetworking/uWebSockets.js/issues/335#issuecomment-643500581
+const RateLimit = (limit: number, interval: number) => {
+  let now = 0
+  const last = Symbol(),
+    count = Symbol()
+  setInterval(() => ++now, interval)
+  return (ws: any) => {
+    if (ws[last] != now) {
+      ws[last] = now
+      ws[count] = 1
+
+      return false
+    } else {
+      return ++ws[count] > limit
+    }
+  }
+}
 
 // Minion is the actual HTTP and WS server implementation
-// it is mean to run in Node.js worker_thread and handles:
+// it is meant to run in Node.js worker_thread and handles:
 // - HTTP requests
 // - WS subscriptions requests
 // - WS data publishing to connected clients
@@ -33,6 +51,16 @@ const { port, nodeEndpoint } = workerData as { port: number; nodeEndpoint: strin
 class Minion {
   private readonly _server: TemplatedApp
   private _apiVersion = '1'
+  private readonly MAX_MESSAGES_PER_SECOND = 50
+
+  // 100 messages per second limit
+  private readonly _wsMessagesRateLimit: (ws: any) => boolean = RateLimit(this.MAX_MESSAGES_PER_SECOND, 1000)
+
+  private readonly _l2SnapshotsSerialized: { [symbol: string]: string } = {}
+  private readonly _l3SnapshotsSerialized: { [symbol: string]: string } = {}
+  private readonly _recentTrades: { [symbol: string]: CircularBuffer<string> } = {}
+  private readonly _recentTradesSerialized: { [symbol: string]: string | undefined } = {}
+
   constructor(private readonly _nodeEndpoint: string) {
     this._server = this._initServer()
   }
@@ -40,47 +68,156 @@ class Minion {
   private _initServer() {
     const apiPrefix = `/v${this._apiVersion}`
     return App()
-      .ws(`${apiPrefix}/streams`, {
+      .ws(`${apiPrefix}/ws`, {
         compression: SHARED_COMPRESSOR,
         maxPayloadLength: 512 * 1024,
-        idleTimeout: 30, // closes WS connection if no message/ping send/received in 30s
+        idleTimeout: 60, // closes WS connection if no message/ping send/received in 60s
         maxBackpressure: 4 * 1024, // close if client is too slow to read the data fast enough
         message: (ws, message) => {
           this._handleSubscriptionRequest(ws, message)
         }
       })
-      .get(`${apiPrefix}/markets`, listMarkets(this._nodeEndpoint))
+
+      .get(`${apiPrefix}/markets`, this._listMarkets)
+      .get(`${apiPrefix}/recent-trades/:market`, this._listRecentTrades)
   }
 
   public async start(port: number) {
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       this._server.listen(port, (listenSocket) => {
         if (listenSocket) {
-          debug(`listening on port ${port}`)
+          logger.info(`Listening on port ${port}`)
           resolve()
         } else {
-          const message = `failed to listen on port ${port}`
-          debug(message)
+          const message = `Failed to listen on port ${port}`
+          logger.error(message)
           reject(new Error(message))
         }
       })
     })
   }
 
-  public async publish(message: DataMessage) {
-    const market = PUB_TOPIC_NAME_FOR_MARKET[message.symbol]
-    this._server.publish(`${message.type}/${market}`, JSON.stringify(message))
+  private _listRecentTrades = async (res: HttpResponse, req: HttpRequest) => {
+    res.onAborted(() => {
+      res.aborted = true
+    })
+
+    const marketName = req.getParameter(0)
+
+    const { isValid, error } = this._validateMarketName(marketName)
+    if (isValid === false) {
+      res.writeHeader('content-type', 'application/json')
+      res.writeStatus('400')
+      res.end(JSON.stringify({ error }))
+    }
+
+    let serializedRecentTrades = this._recentTradesSerialized[marketName]
+    if (serializedRecentTrades === undefined) {
+      const recentTrades =
+        this._recentTrades[marketName] !== undefined ? [...this._recentTrades[marketName]!.items()] : []
+      serializedRecentTrades = `[${recentTrades.join(',')}]`
+    }
+
+    if (!res.aborted) {
+      res.writeHeader('content-type', 'application/json')
+      res.end(serializedRecentTrades)
+    }
+  }
+
+  private _cachedListMarketsResponse: string | undefined = undefined
+
+  //async based on https://github.com/uNetworking/uWebSockets.js/blob/master/examples/AsyncFunction.js
+  private _listMarkets = async (res: HttpResponse) => {
+    res.onAborted(() => {
+      res.aborted = true
+    })
+
+    if (this._cachedListMarketsResponse === undefined) {
+      const markets = await Promise.all(
+        ACTIVE_MARKETS.map(async (market) => {
+          const connection = new Connection(this._nodeEndpoint)
+          const { tickSize, minOrderSize, supportsReferralFees, supportsSrmFeeDiscounts } = await Market.load(
+            connection,
+            market.address,
+            undefined,
+            market.programId
+          )
+
+          const serumMarket: SerumListMarketItem = {
+            symbol: market.name,
+            address: market.address.toString(),
+            programId: market.programId.toString(),
+            tickSize,
+            minOrderSize,
+            deprecated: market.deprecated,
+            supportsReferralFees,
+            supportsSrmFeeDiscounts
+          }
+          return serumMarket
+        })
+      )
+
+      this._cachedListMarketsResponse = JSON.stringify(markets, null, 2)
+      logger.info('Cached markets info response')
+    }
+
+    if (!res.aborted) {
+      res.writeHeader('content-type', 'application/json')
+      res.end(this._cachedListMarketsResponse)
+    }
+  }
+
+  public async processMessage(message: MessageEnvelope) {
+    const topic = `${message.type}/${message.symbol}`
+
+    if (logger.level === 'debug') {
+      const now = new Date().valueOf()
+      logger.debug(`processing message, topic: ${topic}, receive delay: ${now - message.timestamp}ms`)
+    }
+    if (message.type === 'l2snapshot') {
+      this._l2SnapshotsSerialized[message.symbol] = message.payload
+    }
+    if (message.type === 'l3snapshot') {
+      this._l3SnapshotsSerialized[message.symbol] = message.payload
+    }
+
+    if (message.type === 'trade') {
+      if (this._recentTrades[message.symbol] === undefined) {
+        this._recentTrades[message.symbol] = new CircularBuffer(100)
+      }
+
+      this._recentTrades[message.symbol]!.append(message.payload)
+      this._recentTradesSerialized[message.symbol] = undefined
+    }
+
+    if (message.publish) {
+      this._server.publish(topic, message.payload)
+    }
   }
 
   private _handleSubscriptionRequest(ws: WebSocket, buffer: ArrayBuffer) {
     try {
-      const message = Buffer.from(buffer)
-      const request = JSON.parse(message as any) as SubRequest
+      if (this._wsMessagesRateLimit(ws)) {
+        const message = `Too many requests, slow down. Current limit: ${this.MAX_MESSAGES_PER_SECOND} messages per second.`
+        logger.warn(message)
 
-      const validationResult = this._validateRequestPayload(request)
+        const errorMessage: ErrorResponse = {
+          type: 'error',
+          message,
+          timestamp: new Date().valueOf()
+        }
+
+        ws.send(JSON.stringify(errorMessage))
+
+        return
+      }
+      const message = Buffer.from(buffer)
+      const validationResult = this._validateRequestPayload(message)
 
       if (validationResult.isValid === false) {
-        debug('invalid subscription message received: %o. Error: %s', request, message)
+        logger.warn(`Invalid subscription message received, error: ${validationResult.error}`, {
+          message: message.toString()
+        })
 
         const errorMessage: ErrorResponse = {
           type: 'error',
@@ -93,47 +230,87 @@ class Minion {
         return
       }
 
+      const request = validationResult.request
+
       // 'unpack' channel to specific message types that will be published for it
       const requestedTypes = MESSAGE_TYPES_PER_CHANNEL[request.channel]
 
       for (const type of requestedTypes) {
         for (const market of request.markets) {
+          const topic = `${type}/${market}`
           if (request.op === 'subscribe') {
-            ws.subscribe(`${type}/${market}`)
+            ws.subscribe(topic)
+
+            if (type == 'l2snapshot') {
+              const l2Snapshot = this._l2SnapshotsSerialized[market]
+
+              if (l2Snapshot !== undefined) {
+                ws.send(l2Snapshot)
+              }
+            }
+            if (type === 'l3snapshot') {
+              const l3Snapshot = this._l3SnapshotsSerialized[market]
+              if (l3Snapshot !== undefined) {
+                ws.send(l3Snapshot)
+              }
+            }
           } else {
-            ws.unsubscribe(`${type}/${market}`)
+            ws.unsubscribe(topic)
           }
         }
       }
 
-      if (request.op == 'subscribe') {
-        if (requestedTypes.includes('l2snapshot')) {
-          // TODO: send L2 snapshot for requested market
-        }
-        if (requestedTypes.includes('l3snapshot')) {
-          // TODO: send L3 snapshot for requested market
-        }
-      }
-
-      const successMessage: SuccessResponse = {
+      const confirmationMessage: SuccessResponse = {
         type: request.op == 'subscribe' ? 'subscribed' : 'unsubscribed',
         channel: request.channel,
         markets: request.markets,
         timestamp: new Date().valueOf()
       }
 
-      ws.send(JSON.stringify(successMessage))
-      debug('subscription succeeded %o', request)
-    } catch (exception) {
-      debug('subscription request error, %o', exception)
-      // try catch just in case socket is already closed so it would throw
+      ws.send(JSON.stringify(confirmationMessage))
+
+      logger.info(request.op == 'subscribe' ? 'Subscribe successfully' : 'Unsubscribed successfully', {
+        successMessage: confirmationMessage
+      })
+    } catch (err) {
+      const message = 'Subscription request internal error'
+
+      logger.warn(`${message} , ${err.message} ${err.stack}`)
       try {
-        ws.end(1011, 'subscription request error')
+        ws.end(1011, message)
       } catch {}
     }
   }
 
-  _validateRequestPayload(payload: SubRequest) {
+  private _validateMarketName(marketName: string) {
+    if (ACTIVE_MARKETS_NAMES.includes(marketName) === false) {
+      const error = `Invalid market name provided: '${marketName}'.${getDidYouMean(
+        marketName,
+        ACTIVE_MARKETS_NAMES
+      )} ${getAllowedValuesText(ACTIVE_MARKETS_NAMES)}`
+
+      return {
+        isValid: false,
+        error
+      }
+    }
+
+    return {
+      isValid: true
+    }
+  }
+
+  private _validateRequestPayload(message: Buffer) {
+    let payload
+    try {
+      payload = JSON.parse(message as any) as SubRequest
+    } catch {
+      return {
+        isValid: false,
+        error: `Invalid JSON.`
+      } as const
+    }
+
     if (OPS.includes(payload.op) === false) {
       return {
         isValid: false,
@@ -144,16 +321,17 @@ class Minion {
     if (CHANNELS.includes(payload.channel) === false) {
       return {
         isValid: false,
-        error: `Invalid channel provided: '${payload.channel}'.${getDidYouMean(payload.channel, CHANNELS)}  ${getAllowedValuesText(
+        error: `Invalid channel provided: '${payload.channel}'.${getDidYouMean(
+          payload.channel,
           CHANNELS
-        )}`
+        )}  ${getAllowedValuesText(CHANNELS)}`
       } as const
     }
 
     if (!Array.isArray(payload.markets) || payload.markets.length === 0) {
       return {
         isValid: false,
-        error: `Invalid markets array provided.`
+        error: `Invalid or empty markets array provided.`
       } as const
     }
 
@@ -165,26 +343,33 @@ class Minion {
     }
 
     for (const market of payload.markets) {
-      if (MARKETS_ADDRESSES.includes(market) === false) {
+      if (ACTIVE_MARKETS_NAMES.includes(market) === false) {
         return {
           isValid: false,
-          error: `Invalid market address provided: '${market}'.`
+          error: `Invalid market name provided: '${market}'.${getDidYouMean(
+            market,
+            ACTIVE_MARKETS_NAMES
+          )} ${getAllowedValuesText(ACTIVE_MARKETS_NAMES)}`
         } as const
       }
     }
 
     return {
       isValid: true,
-      error: undefined
+      error: undefined,
+      request: payload
     } as const
   }
 }
 
+const { port, nodeEndpoint } = workerData as { port: number; nodeEndpoint: string }
+
 const minion = new Minion(nodeEndpoint)
 
 minion.start(port).then(() => {
-  parentPort!.on('message', (message) => {
-    minion.publish(message)
-    // TODO: process messages too to keep current order book state
-  })
+  serumDataChannel.onmessage = (message) => {
+    minion.processMessage(message.data)
+  }
+
+  minionReadyChannel.postMessage('ready')
 })

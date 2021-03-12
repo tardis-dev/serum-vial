@@ -1,52 +1,33 @@
-import { Market, MARKETS } from '@project-serum/serum'
-import { Connection } from '@solana/web3.js'
-import { HttpResponse } from 'uWebSockets.js'
+import { MARKETS } from '@project-serum/serum'
+import { PublicKey } from '@solana/web3.js'
+import path from 'path'
+import { logger } from './logger'
 
-let cachedListMarketsResponse: string | undefined
+export type Market = typeof MARKETS[0]
 
-async function getListMarketsResponse(nodeEndpoint: string) {
-  if (cachedListMarketsResponse !== undefined) {
-    return cachedListMarketsResponse
-  }
-
-  const markets = await Promise.all(
-    MARKETS.map(async (market) => {
-      const connection = new Connection(nodeEndpoint)
-      const { tickSize, minOrderSize, supportsReferralFees, supportsSrmFeeDiscounts } = await Market.load(
-        connection,
-        market.address,
-        undefined,
-        market.programId
-      )
-
-      return {
-        symbol: market.name,
-        deprecated: market.deprecated,
-        address: market.address.toString(),
-        programId: market.programId.toString(),
-        tickSize,
-        minOrderSize,
-        supportsReferralFees,
-        supportsSrmFeeDiscounts
-      }
-    })
-  )
-
-  cachedListMarketsResponse = JSON.stringify(markets, null, 2)
-
-  return cachedListMarketsResponse
-}
-
-// async based on https://github.com/uNetworking/uWebSockets.js/blob/master/examples/AsyncFunction.js
-export const listMarkets = (nodeEndpoint: string) => async (res: HttpResponse) => {
-  res.onAborted(() => {
-    res.aborted = true
+let _markets: Market[]
+try {
+  const marketsPath = path.join(process.cwd(), 'markets.json')
+  _markets = require(marketsPath).map((market: any) => {
+    return {
+      address: new PublicKey(market.address),
+      name: market.name,
+      programId: new PublicKey(market.programId),
+      deprecated: market.deprecated
+    }
   })
 
-  const listMarketsResponse = await getListMarketsResponse(nodeEndpoint)
+  logger.debug(`Loaded markets from ${marketsPath}`)
+} catch {
+  _markets = MARKETS.filter((m) => m.deprecated == false)
+}
 
-  if (!res.aborted) {
-    res.writeHeader('content-type', 'application/json')
-    res.end(listMarketsResponse)
-  }
+export const ACTIVE_MARKETS = _markets
+
+export const ACTIVE_MARKETS_NAMES = ACTIVE_MARKETS.map((m) => m.name)
+
+if (ACTIVE_MARKETS_NAMES.length !== [...new Set(ACTIVE_MARKETS_NAMES)].length) {
+  throw new Error(
+    "Markets can't have duplicated names as subscriptions allow subscribing by market name, not market address"
+  )
 }

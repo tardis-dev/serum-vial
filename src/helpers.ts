@@ -1,3 +1,4 @@
+import { MARKETS } from '@project-serum/serum'
 import didYouMean from 'didyoumean2'
 
 export const wait = (delayMS: number) => new Promise((resolve) => setTimeout(resolve, delayMS))
@@ -44,6 +45,46 @@ export function decimalPlaces(n: number) {
   return Math.max(
     0, // lower limit.
     (match[1] == '0' ? 0 : (match[1] || '').length) - // fraction length
-      (+match[2] || 0)
+      (+match[2]! || 0)
   ) // exponent
 }
+
+export class CircularBuffer<T> {
+  private _buffer: T[] = []
+  private _index: number = 0
+  constructor(private readonly _bufferSize: number) {}
+
+  append(value: T) {
+    const isFull = this._buffer.length === this._bufferSize
+    let poppedValue
+    if (isFull) {
+      poppedValue = this._buffer[this._index]
+    }
+    this._buffer[this._index] = value
+    this._index = (this._index + 1) % this._bufferSize
+
+    return poppedValue
+  }
+
+  *items() {
+    for (let i = 0; i < this._buffer.length; i++) {
+      const index = (this._index + i) % this._buffer.length
+      yield this._buffer[index]
+    }
+  }
+
+  get count() {
+    return this._buffer.length
+  }
+
+  clear() {
+    this._buffer = []
+    this._index = 0
+  }
+}
+
+const { BroadcastChannel } = require('worker_threads')
+
+export const minionReadyChannel = new BroadcastChannel('MinionReady') as BroadcastChannel
+export const serumProducerReadyChannel = new BroadcastChannel('SerumProducerReady') as BroadcastChannel
+export const serumDataChannel = new BroadcastChannel('SerumData') as BroadcastChannel
