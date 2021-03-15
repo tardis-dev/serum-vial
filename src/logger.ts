@@ -7,7 +7,7 @@ const logFormat = printf(({ level, message, timestamp, ...rest }) => {
 })
 
 export const logger = winston.createLogger({
-  level: 'warn',
+  level: process.env.LOG_LEVEL || 'warn',
   format: combine(process.env.NODE_ENV !== 'production' ? uncolorize() : colorize(), timestamp(), logFormat),
   transports: [new winston.transports.Console()]
 })

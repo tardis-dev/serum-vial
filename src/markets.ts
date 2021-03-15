@@ -1,8 +1,6 @@
 import { MARKETS } from '@project-serum/serum'
 import { PublicKey } from '@solana/web3.js'
 import path from 'path'
-import { logger } from './logger'
-
 export type Market = typeof MARKETS[0]
 
 let _markets: Market[]
@@ -16,8 +14,6 @@ try {
       deprecated: market.deprecated
     }
   })
-
-  logger.debug(`Loaded markets from ${marketsPath}`)
 } catch {
   _markets = MARKETS.filter((m) => m.deprecated == false)
 }

@@ -13,7 +13,7 @@ logger.defaultMeta = {
 
 if (isMainThread) {
   const message = 'Exiting. Worker is not meant to run in main thread'
-  logger.error(message)
+  logger.log('error', message)
 
   throw new Error(message)
 }
@@ -30,7 +30,7 @@ export class SerumProducer {
   constructor(private readonly _options: { nodeEndpoint: string; testMode: boolean; marketName: string }) {}
 
   public async start(onData: OnDataCallback) {
-    logger.info(`Serum Producer starting for  ${this._options.marketName} market ...`)
+    logger.log('info', `Serum Producer starting for  ${this._options.marketName} market ...`)
 
     const marketMeta = ACTIVE_MARKETS.find((m) => m.name == this._options.marketName)!
 
@@ -38,18 +38,17 @@ export class SerumProducer {
 
     const market = await Market.load(connection, marketMeta.address, undefined, marketMeta.programId)
 
-    const accountsNotification = new AccountsChangeNotification(connection, market)
+    const accountsNotification = new AccountsChangeNotification(connection, market, this._options.marketName)
 
     accountsNotification.onAccountsChange = this._processMarketsAccountsChange(marketMeta.name, market, onData)
 
-    logger.info(`Serum Producer started for  ${this._options.marketName} market ...`)
+    logger.log('info', `Serum Producer started for  ${this._options.marketName} market...`)
   }
 
   private _processMarketsAccountsChange(symbol: string, market: Market, onData: OnDataCallback) {
     const priceDecimalPlaces = decimalPlaces(market.tickSize)
     const sizeDecimalPlaces = decimalPlaces(market.minOrderSize)
 
-    // przekazac test mode flag, wtedy produkuje snapshots
     const dataMapper = new DataMapper({
       symbol,
       market,
@@ -82,16 +81,20 @@ class AccountsChangeNotification {
   private _currentSlot: number | undefined = undefined
   private _state: 'PRISTINE' | 'PENDING' | 'PUBLISHED' = 'PRISTINE'
   private _accountsData!: AccountsData
+  private _slotStartTimestamp: number | undefined = undefined
   private _publishTID: NodeJS.Timer | undefined = undefined
-  public onAccountsChange:
-    | ((accountsData: AccountsData, slot: number, restarted: boolean) => void)
-    | undefined = undefined
+  public onAccountsChange: (accountsData: AccountsData, slot: number, restarted: boolean) => void = () => {}
+
   private _asksSubId: number | undefined = undefined
   private _bidsSubId: number | undefined = undefined
   private _eventQueueSubId: number | undefined = undefined
   private _restarted: boolean = false
 
-  constructor(private readonly _connection: Connection, private readonly _market: Market) {
+  constructor(
+    private readonly _connection: Connection,
+    private readonly _market: Market,
+    private readonly _marketName: string
+  ) {
     this._resetAccountData()
     this._subscribeToAccountsChanges()
   }
@@ -141,12 +144,25 @@ class AccountsChangeNotification {
       asks: undefined,
       eventQueue: undefined
     }
+    this._slotStartTimestamp = undefined
   }
   private _publish = () => {
-    if (this.onAccountsChange !== undefined) {
-      this.onAccountsChange(this._accountsData, this._currentSlot!, this._restarted)
-      this._restarted = false
+    const now = new Date().valueOf()
+    const slotTimespan = now - this._slotStartTimestamp!
+
+    if (logger.level === 'debug') {
+      logger.log('debug', `${this._marketName} accounts changed, slot ${this._currentSlot}`)
+
+      if (slotTimespan > 400) {
+        logger.log(
+          'debug',
+          `${this._marketName} market slow notification, slot ${this._currentSlot}, ${slotTimespan}ms`
+        )
+      }
     }
+
+    this.onAccountsChange(this._accountsData, this._currentSlot!, this._restarted)
+    this._restarted = false
 
     this._resetAccountData()
 
@@ -158,9 +174,19 @@ class AccountsChangeNotification {
     this._state = 'PUBLISHED'
   }
 
-  private _startPublishTimer() {
-    // wait up to 400ms for remaining accounts notifications
-    this._publishTID = setTimeout(this._publish, 400)
+  private _restartPublishTimer() {
+    // wait up to 3s for remaining accounts notifications
+    // this handles scenario when there was for example only 'asks' account notification
+    // for a given slot so we still wait for remaining accounts notifications and there is no changes
+    // for next slots for tracked accounts
+    // we assume that if up to 3 seconds there's no further notifications
+    // it's safe to assume that there won't be more for given slot
+
+    if (this._publishTID !== undefined) {
+      clearTimeout(this._publishTID)
+    }
+
+    this._publishTID = setTimeout(this._publish, 3000)
   }
 
   private _receivedDataForAllAccounts() {
@@ -172,14 +198,23 @@ class AccountsChangeNotification {
   }
 
   private _update(accountName: 'bids' | 'asks' | 'eventQueue', accountData: Buffer, slot: number) {
+    if (logger.level === 'debug') {
+      logger.log(
+        'debug',
+        `Received ${this._marketName} ${accountName} account update for slot ${slot}, current state ${this._state}`
+      )
+    }
+
     if (this._state === 'PUBLISHED') {
       // if after we published accounts notification
       // and for some reason next received notification is for already published slot or older
-      // throw error as it's this is situation that should never happen
+      // restart sub as it's this is situation that should never happen
       if (slot <= this._currentSlot!) {
-        throw new Error(
-          `Out of order notification after publish: market: current slot ${this._currentSlot}, update slot: ${slot}`
+        logger.log(
+          'warn',
+          `Out of order notification for PUBLISHED event: current slot ${this._currentSlot}, update slot: ${slot}, restarting subscriptions...`
         )
+        this._restart()
       } else {
         // otherwise move to pristine state
         this._state = 'PRISTINE'
@@ -188,14 +223,22 @@ class AccountsChangeNotification {
 
     if (this._state === 'PRISTINE') {
       this._currentSlot = slot
-      this._startPublishTimer()
       this._state = 'PENDING'
     }
 
     if (this._state === 'PENDING') {
+      this._restartPublishTimer()
       // event for the same slot, just update the data for account
       if (slot === this._currentSlot) {
+        if (this._slotStartTimestamp === undefined) {
+          this._slotStartTimestamp = new Date().valueOf()
+        }
+
+        if (this._accountsData[accountName] !== undefined) {
+          throw new Error(`Received second update for ${this._marketName} ${accountName} account for slot ${slot}`)
+        }
         this._accountsData[accountName] = accountData
+
         // it's pending but since we have data for all accounts for current slot we can publish immediately
         if (this._receivedDataForAllAccounts()) {
           this._publish()
@@ -206,8 +249,9 @@ class AccountsChangeNotification {
         // and run the update again
         this._update(accountName, accountData, slot)
       } else {
-        logger.warning(
-          `Out of order notification for pending event: current slot ${this._currentSlot}, update slot: ${slot}, restarting subscriptions...`
+        logger.log(
+          'warn',
+          `Out of order notification for PENDING event: current slot ${this._currentSlot}, update slot: ${slot}, restarting subscriptions...`
         )
         this._restart()
       }
@@ -236,4 +280,6 @@ export type MessageEnvelope = {
 type OnDataCallback = (envelope: MessageEnvelope) => void
 
 export type AccountName = 'bids' | 'asks' | 'eventQueue'
-export type AccountsData = { [key in AccountName]: Buffer | undefined }
+export type AccountsData = {
+  [key in AccountName]: Buffer | undefined
+}

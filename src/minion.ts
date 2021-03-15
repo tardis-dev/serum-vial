@@ -15,7 +15,7 @@ logger.defaultMeta = {
 
 if (isMainThread) {
   const message = 'Exiting. Worker is not meant to run in main thread'
-  logger.error(message)
+  logger.log('error', message)
 
   throw new Error(message)
 }
@@ -86,11 +86,11 @@ class Minion {
     return new Promise<void>((resolve, reject) => {
       this._server.listen(port, (listenSocket) => {
         if (listenSocket) {
-          logger.info(`Listening on port ${port}`)
+          logger.log('info', `Listening on port ${port}`)
           resolve()
         } else {
           const message = `Failed to listen on port ${port}`
-          logger.error(message)
+          logger.log('error', message)
           reject(new Error(message))
         }
       })
@@ -158,7 +158,7 @@ class Minion {
       )
 
       this._cachedListMarketsResponse = JSON.stringify(markets, null, 2)
-      logger.info('Cached markets info response')
+      logger.log('info', 'Cached markets info response')
     }
 
     if (!res.aborted) {
@@ -172,7 +172,7 @@ class Minion {
 
     if (logger.level === 'debug') {
       const now = new Date().valueOf()
-      logger.debug(`processing message, topic: ${topic}, receive delay: ${now - message.timestamp}ms`)
+      logger.log('debug', `Processing message, topic: ${topic}, receive delay: ${now - message.timestamp}ms`)
     }
     if (message.type === 'l2snapshot') {
       this._l2SnapshotsSerialized[message.symbol] = message.payload
@@ -199,7 +199,7 @@ class Minion {
     try {
       if (this._wsMessagesRateLimit(ws)) {
         const message = `Too many requests, slow down. Current limit: ${this.MAX_MESSAGES_PER_SECOND} messages per second.`
-        logger.warn(message)
+        logger.log('warn', message)
 
         const errorMessage: ErrorResponse = {
           type: 'error',
@@ -215,7 +215,7 @@ class Minion {
       const validationResult = this._validateRequestPayload(message)
 
       if (validationResult.isValid === false) {
-        logger.warn(`Invalid subscription message received, error: ${validationResult.error}`, {
+        logger.log('warn', `Invalid subscription message received, error: ${validationResult.error}`, {
           message: message.toString()
         })
 
@@ -231,6 +231,15 @@ class Minion {
       }
 
       const request = validationResult.request
+
+      const confirmationMessage: SuccessResponse = {
+        type: request.op == 'subscribe' ? 'subscribed' : 'unsubscribed',
+        channel: request.channel,
+        markets: request.markets,
+        timestamp: new Date().valueOf()
+      }
+
+      ws.send(JSON.stringify(confirmationMessage))
 
       // 'unpack' channel to specific message types that will be published for it
       const requestedTypes = MESSAGE_TYPES_PER_CHANNEL[request.channel]
@@ -260,22 +269,13 @@ class Minion {
         }
       }
 
-      const confirmationMessage: SuccessResponse = {
-        type: request.op == 'subscribe' ? 'subscribed' : 'unsubscribed',
-        channel: request.channel,
-        markets: request.markets,
-        timestamp: new Date().valueOf()
-      }
-
-      ws.send(JSON.stringify(confirmationMessage))
-
-      logger.info(request.op == 'subscribe' ? 'Subscribe successfully' : 'Unsubscribed successfully', {
+      logger.log('info', request.op == 'subscribe' ? 'Subscribe successfully' : 'Unsubscribed successfully', {
         successMessage: confirmationMessage
       })
     } catch (err) {
       const message = 'Subscription request internal error'
 
-      logger.warn(`${message} , ${err.message} ${err.stack}`)
+      logger.log('info', `${message} , ${err.message} ${err.stack}`)
       try {
         ws.end(1011, message)
       } catch {}

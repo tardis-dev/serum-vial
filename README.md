@@ -1,6 +1,6 @@
-# Serum Machine
+# serum-vial
 
-[![Version](https://img.shields.io/npm/v/serum-machine.svg)](https://www.npmjs.org/package/serum-machine)
+[![Version](https://img.shields.io/npm/v/serum-vial.svg)](https://www.npmjs.org/package/serum-vial)
 
 Real-time market data API server for Serum DEX
 <br/>
@@ -21,7 +21,7 @@ Real-time market data API server for Serum DEX
 
 - ### npx <sub>(requires Node.js >= 12 installed on host machine)</sub>
 
-  That will start Serum Machine server running on port `8000`
+  That will start serum-vial server running on port `8000`
 
   ```sh
   npx serum-machine
@@ -64,7 +64,7 @@ Real-time market data API server for Serum DEX
   <br/>
   <br/>
 
-## WebSocket `/streams` endpoint
+## WebSocket `/ws` endpoint
 
 Allows subscribing to Serum DEX real-market data streams.
 
@@ -78,8 +78,8 @@ ws.onmessage = (message) => {
 ws.onopen = () => {
   const subscribePayload = {
     op: 'subscribe',
-    channel: 'trades',
-    markets: ['EXnGBBSamqzd3uxEdRLUiYzjJkTwQyorAaFXdfteuGXe', '5abZGhrELnUnfM9ZUnvK6XJPoBU5eShZwfFPkdhAC7o']
+    channel: 'level3',
+    markets: ['BTC/USDT']
   }
 
   ws.send(JSON.stringify(subscribePayload))
@@ -93,7 +93,7 @@ ws.onopen = () => {
 
 ### `/markets`
 
-Accepts no params and returns supported Serum markets.
+Accepts no params and returns non depreciated Serum markets.
 
 #### Sample request & response
 

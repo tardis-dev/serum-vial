@@ -45,10 +45,9 @@ const argv = yargs
 
 // if port ENV is defined use it otherwise use provided options
 const port = process.env.PORT ? +process.env.PORT : argv['port']
+process.env.LOG_LEVEL = argv['log-level']
 
 const { bootServer, logger } = require('../dist')
-
-logger.level = argv['log-level']
 
 async function start() {
   await bootServer({
@@ -58,12 +57,12 @@ async function start() {
   })
 
   if (isDocker()) {
-    logger.info(`Serum vial v${pkg.version} is running inside Docker container`)
+    logger.log('info', `Serum Vial v${pkg.version} is running inside Docker container`)
   } else {
-    logger.info(`Serum vial server v${pkg.version} is running on port ${port}`)
+    logger.log('info', `Serum Vial server v${pkg.version} is running on port ${port}`)
   }
 
-  logger.info(`See https://github.com/tardis-dev/serum-vial for more information.`)
+  logger.log('info', `See https://github.com/tardis-dev/serum-vial for more information.`)
 }
 
 start()
