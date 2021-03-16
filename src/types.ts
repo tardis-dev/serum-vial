@@ -14,7 +14,7 @@ export type SubRequest = {
 
 export interface Message {
   readonly type: MessageType
-  readonly timestamp: number
+  readonly timestamp: string
 }
 
 export interface DataMessage extends Message {
@@ -65,8 +65,8 @@ export interface Fill extends DataMessage {
   readonly feeCost: number
   readonly orderId: string
   readonly clientId?: string
-  readonly openOrders: string
-  readonly openOrdersSlot: number
+  readonly account: string
+  readonly accountSlot: number
   readonly feeTier: number
 }
 
@@ -76,12 +76,12 @@ export type OrderItem = {
   readonly side: 'buy' | 'sell'
   readonly orderId: string
   readonly clientId?: string
-  readonly openOrders: string
-  readonly openOrdersSlot: number
+  readonly account: string
+  readonly accountSlot: number
   readonly feeTier: number
 }
 
-export interface OrderOpen extends DataMessage, OrderItem {
+export interface Open extends DataMessage, OrderItem {
   readonly type: 'open'
 }
 
@@ -91,19 +91,19 @@ export interface Done extends DataMessage {
   readonly side: 'buy' | 'sell'
   readonly orderId: string
   readonly clientId?: string
-  readonly openOrders: string
-  readonly openOrdersSlot: number
+  readonly account: string
+  readonly accountSlot: number
   readonly feeTier: number
 }
 
 export interface Change extends DataMessage {
   readonly type: 'change'
-  readonly newSize: string
+  readonly size: string
   readonly side: 'buy' | 'sell'
   readonly orderId: string
   readonly clientId?: string
-  readonly openOrders: string
-  readonly openOrdersSlot: number
+  readonly account: string
+  readonly accountSlot: number
   readonly feeTier: number
 }
 
@@ -113,7 +113,7 @@ export interface L3Snapshot extends DataMessage {
   readonly bids: OrderItem[]
 }
 
-export type L3DataMessage = OrderOpen | Fill | Done | L3Snapshot
+export type L3DataMessage = Open | Fill | Done | L3Snapshot | Change
 
 export type SerumListMarketItem = {
   symbol: string

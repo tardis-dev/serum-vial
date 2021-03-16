@@ -30,7 +30,7 @@ export class SerumProducer {
   constructor(private readonly _options: { nodeEndpoint: string; testMode: boolean; marketName: string }) {}
 
   public async start(onData: OnDataCallback) {
-    logger.log('info', `Serum Producer starting for  ${this._options.marketName} market ...`)
+    logger.log('info', `Serum producer starting for ${this._options.marketName} market ...`)
 
     const marketMeta = ACTIVE_MARKETS.find((m) => m.name == this._options.marketName)!
 
@@ -42,7 +42,7 @@ export class SerumProducer {
 
     accountsNotification.onAccountsChange = this._processMarketsAccountsChange(marketMeta.name, market, onData)
 
-    logger.log('info', `Serum Producer started for  ${this._options.marketName} market...`)
+    logger.log('info', `Serum producer started for ${this._options.marketName} market...`)
   }
 
   private _processMarketsAccountsChange(symbol: string, market: Market, onData: OnDataCallback) {
@@ -175,18 +175,18 @@ class AccountsChangeNotification {
   }
 
   private _restartPublishTimer() {
-    // wait up to 3s for remaining accounts notifications
+    // wait up to 6s for remaining accounts notifications
     // this handles scenario when there was for example only 'asks' account notification
     // for a given slot so we still wait for remaining accounts notifications and there is no changes
     // for next slots for tracked accounts
-    // we assume that if up to 3 seconds there's no further notifications
+    // we assume that if up to 6 seconds there's no further notifications
     // it's safe to assume that there won't be more for given slot
 
     if (this._publishTID !== undefined) {
       clearTimeout(this._publishTID)
     }
 
-    this._publishTID = setTimeout(this._publish, 3000)
+    this._publishTID = setTimeout(this._publish, 6000)
   }
 
   private _receivedDataForAllAccounts() {
@@ -274,7 +274,7 @@ export type MessageEnvelope = {
   symbol: string
   publish: boolean
   payload: string
-  timestamp: number
+  timestamp: string
 }
 
 type OnDataCallback = (envelope: MessageEnvelope) => void

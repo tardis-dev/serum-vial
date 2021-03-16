@@ -171,8 +171,8 @@ class Minion {
     const topic = `${message.type}/${message.symbol}`
 
     if (logger.level === 'debug') {
-      const now = new Date().valueOf()
-      logger.log('debug', `Processing message, topic: ${topic}, receive delay: ${now - message.timestamp}ms`)
+      const diff = new Date().valueOf() - new Date(message.timestamp).valueOf()
+      logger.log('debug', `Processing message, topic: ${topic}, receive delay: ${diff}ms`)
     }
     if (message.type === 'l2snapshot') {
       this._l2SnapshotsSerialized[message.symbol] = message.payload
@@ -204,7 +204,7 @@ class Minion {
         const errorMessage: ErrorResponse = {
           type: 'error',
           message,
-          timestamp: new Date().valueOf()
+          timestamp: new Date().toISOString()
         }
 
         ws.send(JSON.stringify(errorMessage))
@@ -222,7 +222,7 @@ class Minion {
         const errorMessage: ErrorResponse = {
           type: 'error',
           message: validationResult.error,
-          timestamp: new Date().valueOf()
+          timestamp: new Date().toISOString()
         }
 
         ws.send(JSON.stringify(errorMessage))
@@ -236,7 +236,7 @@ class Minion {
         type: request.op == 'subscribe' ? 'subscribed' : 'unsubscribed',
         channel: request.channel,
         markets: request.markets,
-        timestamp: new Date().valueOf()
+        timestamp: new Date().toISOString()
       }
 
       ws.send(JSON.stringify(confirmationMessage))
