@@ -194,36 +194,18 @@ export class DataMapper {
           ;(matchingOrder as any).size = (Number((matchingOrder as any).size) - Number(item.size)).toFixed(
             this._options.sizeDecimalPlaces
           )
-        } else {
-          logger.log('warn', 'Matching order for "fill" not found', {
-            fill: item,
-            l3Diff
-          })
         }
       }
 
       if (item.type === 'change') {
         const matchingOrder = orders.find((o) => o.orderId === item.orderId)
-
-        if (matchingOrder !== undefined) {
-          ;(matchingOrder as any).size = item.size
-        } else {
-          logger.log('warn', 'Matching order for "change" not found', {
-            change: item,
-            l3Diff
-          })
-        }
+        ;(matchingOrder as any).size = item.size
       }
 
       if (item.type === 'done') {
         const indexToRemove = orders.findIndex((o) => o.orderId === item.orderId)
         if (indexToRemove !== -1) {
           orders.splice(indexToRemove, 1)
-        } else {
-          logger.log('warn', 'Matching order for "done" not found', {
-            done: item,
-            l3Diff
-          })
         }
       }
     }
