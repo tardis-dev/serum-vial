@@ -1,6 +1,6 @@
 {
   "name": "serum-vial",
-  "version": "0.1.3",
+  "version": "0.1.0",
   "engines": {
     "node": ">=12"
   },
@@ -14,10 +14,10 @@
     "build": "tsc",
     "precommit": "lint-staged",
     "test": "jest --runInBand --forceExit",
-    "benchmark": "node ./benchmark.js",
     "prepare": "npm run build",
-    "start": "npm run build && node ./bin/serum-vial.js --log-level=debug",
-    "release": "cross-var \"npm run build && npm run test && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && npm publish --access=public\""
+    "start:debug": "npm run build && node ./bin/serum-vial.js --log-level=debug",
+    "format": "prettier --write **/*.{ts,json,md,yaml}",
+    "check-format": "prettier --check **/*.{ts,json,md,yaml}"
   },
   "bin": {
     "serum-vial": "./bin/serum-vial.js"
