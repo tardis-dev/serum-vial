@@ -1,4 +1,4 @@
-name: Publish New Release to NPM
+name: Publish New Release To NPM
 
 on:
   release:
@@ -6,7 +6,8 @@ on:
     types: [published]
 
 jobs:
-  build:
+  publish_new_release_to_npm:
+    name: Publish New Release To NPM
     runs-on: ubuntu-latest
 
     steps:
@@ -25,7 +26,7 @@ jobs:
         run: npm ci
 
       - name: Configure Git
-        run: git config --global user.name "GitHub Action Bot"
+        run: git config --global user.name "GitHub Release Bot"
 
       - name: Update package version
         run: npm version ${{ github.event.release.tag_name }}
@@ -38,7 +39,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Push Version Changes to GitHub
+      - name: Push Version Changes To GitHub
         run: git push
         env:
           github-token: ${{ secrets.GITHUB_TOKEN }}
