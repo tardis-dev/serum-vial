@@ -58,9 +58,9 @@ async function start() {
 
   const suffix = argv['test-mode'] ? ' in test mode.' : ''
   if (isDocker()) {
-    logger.log('info', `Serum Vial v${pkg.version} is running inside Docker container${suffix}`)
+    logger.log('info', `serum-vial v${pkg.version} is running inside Docker container${suffix}`)
   } else {
-    logger.log('info', `Serum Vial server v${pkg.version} is running on port ${port}${suffix}`)
+    logger.log('info', `serum-vial server v${pkg.version} is running on port ${port}${suffix}`)
   }
 
   logger.log('info', `See https://github.com/tardis-dev/serum-vial for more information.`)

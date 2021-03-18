@@ -93,7 +93,6 @@ export interface Done extends DataMessage {
   readonly clientId?: string
   readonly account: string
   readonly accountSlot: number
-  readonly feeTier: number
 }
 
 export interface Change extends DataMessage {

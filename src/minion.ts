@@ -1,6 +1,14 @@
 import { Market } from '@project-serum/serum'
 import { Connection } from '@solana/web3.js'
-import { App, HttpRequest, HttpResponse, SHARED_COMPRESSOR, TemplatedApp, WebSocket } from 'uWebSockets.js'
+import {
+  App,
+  HttpRequest,
+  HttpResponse,
+  SHARED_COMPRESSOR,
+  TemplatedApp,
+  WebSocket,
+  us_listen_socket_close
+} from 'uWebSockets.js'
 import { isMainThread, threadId, workerData } from 'worker_threads'
 import { CHANNELS, MESSAGE_TYPES_PER_CHANNEL, OPS } from './consts'
 import { CircularBuffer, getAllowedValuesText, getDidYouMean, minionReadyChannel, serumDataChannel } from './helpers'
@@ -9,19 +17,29 @@ import { ACTIVE_MARKETS, ACTIVE_MARKETS_NAMES } from './markets'
 import { MessageEnvelope } from './serum_producer'
 import { ErrorResponse, SerumListMarketItem, SubRequest, SuccessResponse } from './types'
 
-logger.defaultMeta = {
+const meta = {
   minionId: threadId
 }
 
 if (isMainThread) {
   const message = 'Exiting. Worker is not meant to run in main thread'
-  logger.log('error', message)
+  logger.log('error', message, meta)
 
   throw new Error(message)
 }
 
 process.on('unhandledRejection', (err) => {
   throw err
+})
+
+// https://github.com/uNetworking/uWebSockets.js/issues/465
+let listenSocket: any
+process.on('uncaughtException', (_) => {
+  if (listenSocket !== undefined) {
+    us_listen_socket_close(listenSocket)
+  }
+
+  process.exit(1)
 })
 
 // based on https://github.com/uNetworking/uWebSockets.js/issues/335#issuecomment-643500581
@@ -84,13 +102,14 @@ class Minion {
 
   public async start(port: number) {
     return new Promise<void>((resolve, reject) => {
-      this._server.listen(port, (listenSocket) => {
-        if (listenSocket) {
-          logger.log('info', `Listening on port ${port}`)
+      this._server.listen(port, (socket) => {
+        if (socket) {
+          listenSocket = socket
+          logger.log('info', `Listening on port ${port}`, meta)
           resolve()
         } else {
           const message = `Failed to listen on port ${port}`
-          logger.log('error', message)
+          logger.log('error', message, meta)
           reject(new Error(message))
         }
       })
@@ -102,13 +121,14 @@ class Minion {
       res.aborted = true
     })
 
-    const marketName = req.getParameter(0)
+    const marketName = decodeURIComponent(req.getParameter(0))
 
     const { isValid, error } = this._validateMarketName(marketName)
     if (isValid === false) {
       res.writeHeader('content-type', 'application/json')
       res.writeStatus('400')
       res.end(JSON.stringify({ error }))
+      return
     }
 
     let serializedRecentTrades = this._recentTradesSerialized[marketName]
@@ -158,7 +178,7 @@ class Minion {
       )
 
       this._cachedListMarketsResponse = JSON.stringify(markets, null, 2)
-      logger.log('info', 'Cached markets info response')
+      logger.log('info', 'Cached markets info response', meta)
     }
 
     if (!res.aborted) {
@@ -172,7 +192,7 @@ class Minion {
 
     if (logger.level === 'debug') {
       const diff = new Date().valueOf() - new Date(message.timestamp).valueOf()
-      logger.log('debug', `Processing message, topic: ${topic}, receive delay: ${diff}ms`)
+      logger.log('debug', `Processing message, topic: ${topic}, receive delay: ${diff}ms`, meta)
     }
     if (message.type === 'l2snapshot') {
       this._l2SnapshotsSerialized[message.symbol] = message.payload
@@ -199,7 +219,7 @@ class Minion {
     try {
       if (this._wsMessagesRateLimit(ws)) {
         const message = `Too many requests, slow down. Current limit: ${this.MAX_MESSAGES_PER_SECOND} messages per second.`
-        logger.log('warn', message)
+        logger.log('info', message, meta)
 
         const errorMessage: ErrorResponse = {
           type: 'error',
@@ -215,8 +235,9 @@ class Minion {
       const validationResult = this._validateRequestPayload(message)
 
       if (validationResult.isValid === false) {
-        logger.log('warn', `Invalid subscription message received, error: ${validationResult.error}`, {
-          message: message.toString()
+        logger.log('info', `Invalid subscription message received, error: ${validationResult.error}`, {
+          message: message.toString(),
+          ...meta
         })
 
         const errorMessage: ErrorResponse = {
@@ -269,13 +290,14 @@ class Minion {
         }
       }
 
-      logger.log('info', request.op == 'subscribe' ? 'Subscribe successfully' : 'Unsubscribed successfully', {
-        successMessage: confirmationMessage
+      logger.log('debug', request.op == 'subscribe' ? 'Subscribe successfully' : 'Unsubscribed successfully', {
+        successMessage: confirmationMessage,
+        ...meta
       })
     } catch (err) {
       const message = 'Subscription request internal error'
 
-      logger.log('info', `${message} , ${err.message} ${err.stack}`)
+      logger.log('info', `${message} , ${err.message} ${err.stack}`, meta)
       try {
         ws.end(1011, message)
       } catch {}

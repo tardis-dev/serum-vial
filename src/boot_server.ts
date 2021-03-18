@@ -69,7 +69,7 @@ export async function bootServer({ port, nodeEndpoint, testMode }: BootOptions) 
     })
 
     // just in case to not get hit by serum RPC node rate limits...
-    await wait(500)
+    await wait(1000)
   }
 
   await new Promise<void>(async (resolve) => {

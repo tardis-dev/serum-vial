@@ -88,3 +88,22 @@ const { BroadcastChannel } = require('worker_threads')
 export const minionReadyChannel = new BroadcastChannel('MinionReady') as BroadcastChannel
 export const serumProducerReadyChannel = new BroadcastChannel('SerumProducerReady') as BroadcastChannel
 export const serumDataChannel = new BroadcastChannel('SerumData') as BroadcastChannel
+
+export async function executeAndRetry<T>(
+  operation: (attempt: number) => Promise<T>,
+  { maxRetries }: { maxRetries: number }
+): Promise<T> {
+  let attempts = 0
+  while (true) {
+    attempts++
+    try {
+      return await operation(attempts)
+    } catch (err) {
+      if (attempts > maxRetries) {
+        throw err
+      }
+
+      await wait(500 * attempts * attempts)
+    }
+  }
+}

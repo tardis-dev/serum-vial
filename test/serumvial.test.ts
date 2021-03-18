@@ -1,3 +1,3 @@
-describe('Serum Vial', () => {
+describe('serum-vial', () => {
   test('hello', () => {})
 })

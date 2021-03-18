@@ -29,14 +29,9 @@ export class DataMapper {
     this._marketAddress = this._options.market.address.toString()
   }
 
-  public *map(accountsData: AccountsData, slot: string, restarted: boolean): IterableIterator<MessageEnvelope> {
+  public *map(accountsData: AccountsData, slot: string): IterableIterator<MessageEnvelope> {
     // the same timestamp for all messages received in single notification
     const timestamp = new Date().toISOString()
-
-    // if subscription was restarted, reset everything and re-init from scratch
-    if (restarted) {
-      this._reset()
-    }
 
     const l3Diff: (Open | Fill | Done | Change)[] = []
 
@@ -154,7 +149,7 @@ export class DataMapper {
     return
   }
 
-  private _reset() {
+  public reset() {
     this._initialized = false
     this._lastSeenSeqNum = undefined
     this._bidsAccountOrders = undefined
@@ -333,8 +328,7 @@ export class DataMapper {
         side,
         reason: fillsIds.includes(orderId) ? 'filled' : 'canceled',
         account: openOrdersAccount,
-        accountSlot: openOrdersSlot,
-        feeTier: feeTier
+        accountSlot: openOrdersSlot
       }
 
       return doneMessage
