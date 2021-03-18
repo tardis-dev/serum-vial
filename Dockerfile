@@ -1,9 +1,10 @@
-from node:14-slim
+from node:15-slim
 # version arg contains current git tag
 ARG VERSION_ARG
 # install git
 RUN apt-get update && apt-get install -y git
-# install Serum Machine globally (exposes serum-machine command)
-RUN npm install --global --unsafe-perm serum-machine@$VERSION_ARG
+
+# install serum-vial globally (exposes serum-vial command)
+RUN npm install --global --unsafe-perm serum-vial@$VERSION_ARG
 # run it
-CMD serum-machine
+CMD serum-vial

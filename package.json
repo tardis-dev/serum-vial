@@ -1,8 +1,8 @@
 {
   "name": "serum-vial",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "engines": {
-    "node": ">=12"
+    "node": ">=15"
   },
   "description": "Real-time WebSocket market data API server for Serum DEX",
   "main": "dist/index.js",
@@ -20,7 +20,7 @@
     "check-format": "prettier --check **/*.{ts,json,md,yaml}"
   },
   "bin": {
-    "serum-vial": "./bin/serum-vial.js"
+    "serum-vial": "bin/serum-vial.js"
   },
   "files": [
     "src",

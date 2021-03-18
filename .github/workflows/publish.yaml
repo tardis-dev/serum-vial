@@ -1,4 +1,4 @@
-name: Publish New Release To NPM
+name: Publish New Release To NPM And Image To Docker Hub
 
 on:
   release:
@@ -6,9 +6,11 @@ on:
     types: [published]
 
 jobs:
-  publish_new_release_to_npm:
-    name: Publish New Release To NPM
+  publish:
+    name: Publish New Release To NPM And Image To Docker Hub
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: tardisdev/serum-vial
 
     steps:
       - name: Checkout
@@ -43,3 +45,17 @@ jobs:
         run: git push
         env:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker Image
+        run: docker build --build-arg VERSION_ARG="${{ github.event.release.tag_name }}" -t ${{ github.env.IMAGE_NAME }}:${{ github.event.release.tag_name }} .
+
+      - name: Login To Docker Hub
+        run: echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: Push Image to Docker Hub
+        run: docker tag ${{ github.env.IMAGE_NAME }}:latest && docker push
+
+      - name: Logout From Docker Hub
+        run: docker logout
+        if: ${{ always() }}
+  	    continue-on-error: true
