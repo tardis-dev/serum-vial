@@ -53,7 +53,7 @@ jobs:
         run: echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
       - name: Push Image to Docker Hub
-        run: docker tag ${{ env.IMAGE_NAME }}:latest && docker push
+        run: docker tag ${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }} ${{ env.IMAGE_NAME }}:latest && docker push
 
       - name: Logout From Docker Hub
         run: docker logout
