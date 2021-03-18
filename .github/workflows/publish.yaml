@@ -52,11 +52,11 @@ jobs:
       - name: Login To Docker Hub
         run: echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-      - name: Tag Docker Image as :latest
+      - name: Tag Docker Image as Latest
         run: docker tag ${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }} ${{ env.IMAGE_NAME }}:latest
 
       - name: Push Image to Docker Hub
-        run: docker push ${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}
+        run: docker push ${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }} && docker push ${{ env.IMAGE_NAME }}:latest
 
       - name: Logout From Docker Hub
         run: docker logout
