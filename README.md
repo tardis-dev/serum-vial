@@ -1,6 +1,6 @@
 <img src="https://raw.githubusercontent.com/tardis-dev/serum-vial/master/logo.svg">
 
-# serum-vial - real-time market data API server for Serum DEX
+# serum-vial: real-time market data server for Serum DEX
 
 [![Version](https://img.shields.io/npm/v/serum-vial.svg)](https://www.npmjs.org/package/serum-vial)
 
