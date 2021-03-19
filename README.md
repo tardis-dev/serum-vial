@@ -6,10 +6,6 @@
 
 <br/>
 
-## Architecture
-
-![architecture diagram](https://user-images.githubusercontent.com/51779538/111766810-3f20e080-88a6-11eb-8c4c-54787332cc84.png)
-
 ## Installation
 
 - ### npx <sub>(requires Node.js >= 15 installed on host machine)</sub>
