@@ -30,9 +30,9 @@ const argv = yargs
     choices: ['debug', 'info', 'warn', 'error'],
     default: 'info'
   })
-  .option('test-mode', {
+  .option('validate-l3-diffs', {
     type: 'boolean',
-    describe: 'Enable test mode with full order book snapshots for each update',
+    describe: 'Validate correctness of produced L3 data diffs',
     default: false
   })
 
@@ -53,14 +53,13 @@ async function start() {
   await bootServer({
     port,
     nodeEndpoint: argv['endpoint'],
-    testMode: argv['test-mode']
+    validateL3Diffs: argv['validate-l3-diffs']
   })
 
-  const suffix = argv['test-mode'] ? ' in test mode.' : ''
   if (isDocker()) {
-    logger.log('info', `serum-vial v${pkg.version} is running inside Docker container${suffix}`)
+    logger.log('info', `serum-vial v${pkg.version} is running inside Docker container.`)
   } else {
-    logger.log('info', `serum-vial server v${pkg.version} is running on port ${port}${suffix}`)
+    logger.log('info', `serum-vial server v${pkg.version} is running on port ${port}.`)
   }
 
   logger.log('info', `See https://github.com/tardis-dev/serum-vial for more information.`)

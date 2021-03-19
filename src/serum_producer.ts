@@ -23,11 +23,11 @@ process.on('unhandledRejection', (err) => {
 // - map received data to normalized data messages and broadcast those
 
 export class SerumProducer {
-  constructor(private readonly _options: { nodeEndpoint: string; testMode: boolean; marketName: string }) {}
+  constructor(private readonly _options: { nodeEndpoint: string; validateL3Diffs: boolean; marketName: string }) {}
 
   public async run(onData: OnDataCallback) {
     let started = false
-    logger.log('info', `Serum producer starting for ${this._options.marketName} market...`)
+    logger.log('info', `Serum producer starting for ${this._options.marketName} market...`, { options: this._options })
 
     const marketMeta = ACTIVE_MARKETS.find((m) => m.name == this._options.marketName)!
 
@@ -43,7 +43,7 @@ export class SerumProducer {
       market,
       priceDecimalPlaces,
       sizeDecimalPlaces,
-      testMode: this._options.testMode
+      validateL3Diffs: this._options.validateL3Diffs
     })
 
     for await (const notification of rpcClient.streamAccountsNotification(market, this._options.marketName)) {

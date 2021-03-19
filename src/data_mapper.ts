@@ -3,7 +3,8 @@ import { Order } from '@project-serum/serum/lib/market'
 import { Event } from '@project-serum/serum/lib/queue'
 import BN from 'bn.js'
 import { logger } from './logger'
-import { AccountsData, MessageEnvelope } from './serum_producer'
+import { AccountsData } from './rpc_client'
+import { MessageEnvelope } from './serum_producer'
 import { Change, DataMessage, Done, EventQueueHeader, Fill, L3Snapshot, OrderItem, Open } from './types'
 
 // DataMapper maps bids, asks and evenQueue accounts data to normalized messages
@@ -23,7 +24,7 @@ export class DataMapper {
       readonly market: Market
       readonly priceDecimalPlaces: number
       readonly sizeDecimalPlaces: number
-      readonly testMode: boolean
+      readonly validateL3Diffs: boolean
     }
   ) {
     this._marketAddress = this._options.market.address.toString()
@@ -86,7 +87,7 @@ export class DataMapper {
       this._bidsAccountOrders = newBidsSnapshot
     }
 
-    if (this._options.testMode && this._initialized && l3Diff.length > 0) {
+    if (this._options.validateL3Diffs && this._initialized && l3Diff.length > 0) {
       this._validateL3DiffCorrectness(l3Diff)
     }
 
@@ -101,11 +102,7 @@ export class DataMapper {
         bids: this._bidsAccountOrders
       }
 
-      if (this._options.testMode && this._initialized === true) {
-        ;(l3Snapshot as any).testMode = true
-      }
-
-      const publish = this._options.testMode || this._initialized === false
+      const publish = this._initialized === false
       this._initialized = true
 
       yield this._putInEnvelope(l3Snapshot, publish)
@@ -211,7 +208,7 @@ export class DataMapper {
         bidsAccountOrders: this._bidsAccountOrders,
         localBidsOrders: this._localBidsOrders
       })
-      this._reset()
+
       return
     }
 
@@ -229,7 +226,6 @@ export class DataMapper {
           bid,
           matchingLocalBid
         })
-        this._reset()
         return
       }
     }
@@ -240,7 +236,6 @@ export class DataMapper {
         asksAccountOrders: this._asksAccountOrders,
         localAsksOrders: this._localAsksOrders
       })
-      this._reset()
       return
     }
 
@@ -255,13 +250,9 @@ export class DataMapper {
           l3Diff,
           asksAccountOrders: this._asksAccountOrders,
           localAsksOrders: this._localAsksOrders,
-
           ask,
           matchingLocalAsk
         })
-
-        this._reset()
-
         return
       }
     }

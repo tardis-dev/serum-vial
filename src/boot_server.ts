@@ -5,7 +5,7 @@ import { minionReadyChannel, serumProducerReadyChannel, wait } from './helpers'
 import { logger } from './logger'
 import { ACTIVE_MARKETS_NAMES } from './markets'
 
-export async function bootServer({ port, nodeEndpoint, testMode }: BootOptions) {
+export async function bootServer({ port, nodeEndpoint, validateL3Diffs }: BootOptions) {
   // multi core support is linux only feature which allows multiple threads to bind to the same port
   // see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/
   const MINIONS_COUNT = os.platform() === 'linux' ? os.cpus().length : 1
@@ -53,7 +53,7 @@ export async function bootServer({ port, nodeEndpoint, testMode }: BootOptions) 
 
   for (const marketName of ACTIVE_MARKETS_NAMES) {
     const serumProducerWorker = new Worker(path.resolve(__dirname, 'serum_producer.js'), {
-      workerData: { marketName, nodeEndpoint, testMode }
+      workerData: { marketName, nodeEndpoint, validateL3Diffs }
     })
 
     serumProducerWorker.on('error', (err) => {
@@ -87,5 +87,5 @@ export async function bootServer({ port, nodeEndpoint, testMode }: BootOptions) 
 type BootOptions = {
   port: number
   nodeEndpoint: string
-  testMode: boolean
+  validateL3Diffs: boolean
 }
