@@ -9,7 +9,7 @@ Real-time market data API server for Serum DEX
 
 ## Architecture
 
-![architecture diagram](https://user-images.githubusercontent.com/51779538/92960443-ed6a4a00-f46d-11ea-9da8-2d4546db8a7d.png)
+![architecture diagram](https://user-images.githubusercontent.com/51779538/111766810-3f20e080-88a6-11eb-8c4c-54787332cc84.png)
 
 - server runs with multiple `Minions` worker threads\* and single `Serum Producer` that runs in the main thread
 - `Minions` are responsible for WebSockets subscriptions management, constructing L2 & L1 messages out of L3 messages published by `Serum Producer` and broadcasting all those messages to all subscribed clients
