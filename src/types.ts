@@ -64,7 +64,7 @@ export interface Fill extends DataMessage {
   readonly maker: boolean
   readonly feeCost: number
   readonly orderId: string
-  readonly clientId?: string
+  readonly clientId: string
   readonly account: string
   readonly accountSlot: number
   readonly feeTier: number
@@ -75,7 +75,7 @@ export type OrderItem = {
   readonly size: string
   readonly side: 'buy' | 'sell'
   readonly orderId: string
-  readonly clientId?: string
+  readonly clientId: string
   readonly account: string
   readonly accountSlot: number
   readonly feeTier: number
@@ -100,7 +100,7 @@ export interface Change extends DataMessage {
   readonly size: string
   readonly side: 'buy' | 'sell'
   readonly orderId: string
-  readonly clientId?: string
+  readonly clientId: string
   readonly account: string
   readonly accountSlot: number
   readonly feeTier: number

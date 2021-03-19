@@ -1,22 +1,56 @@
 import { EVENT_QUEUE_LAYOUT, Market, Orderbook } from '@project-serum/serum'
-import { Order } from '@project-serum/serum/lib/market'
 import { Event } from '@project-serum/serum/lib/queue'
+import { PublicKey } from '@solana/web3.js'
 import BN from 'bn.js'
 import { logger } from './logger'
 import { AccountsData } from './rpc_client'
 import { MessageEnvelope } from './serum_producer'
-import { Change, DataMessage, Done, EventQueueHeader, Fill, L3Snapshot, OrderItem, Open } from './types'
+import {
+  Change,
+  DataMessage,
+  Done,
+  EventQueueHeader,
+  Fill,
+  L2,
+  L3Snapshot,
+  Open,
+  OrderItem,
+  PriceLevel,
+  Quote,
+  Trade
+} from './types'
 
 // DataMapper maps bids, asks and evenQueue accounts data to normalized messages
 export class DataMapper {
   private _bidsAccountOrders: OrderItem[] | undefined = undefined
   private _asksAccountOrders: OrderItem[] | undefined = undefined
+
+  private _bidsAccountSlabItems: SlabItem[] | undefined = undefined
+  private _asksAccounSlabItems: SlabItem[] | undefined = undefined
+
+  // _local* are used only for verification purposes
   private _localBidsOrders: OrderItem[] | undefined = undefined
   private _localAsksOrders: OrderItem[] | undefined = undefined
+
   private _initialized = false
   private _lastSeenSeqNum: number | undefined = undefined
 
+  private _currentL2Snapshot:
+    | {
+        asks: PriceLevel[]
+        bids: PriceLevel[]
+      }
+    | undefined = undefined
+
+  private _currentQuote:
+    | {
+        readonly bestAsk: PriceLevel | undefined
+        readonly bestBid: PriceLevel | undefined
+      }
+    | undefined = undefined
+
   private readonly _marketAddress: string
+  private _zeroWithPrecision: string
 
   constructor(
     private readonly _options: {
@@ -28,6 +62,8 @@ export class DataMapper {
     }
   ) {
     this._marketAddress = this._options.market.address.toString()
+    const zero = 0
+    this._zeroWithPrecision = zero.toFixed(this._options.sizeDecimalPlaces)
   }
 
   public *map(accountsData: AccountsData, slot: string): IterableIterator<MessageEnvelope> {
@@ -52,13 +88,16 @@ export class DataMapper {
     }
 
     if (accountsData.asks !== undefined) {
-      const newAsksSnapshot = [...Orderbook.decode(this._options.market, accountsData.asks).items(false)].map(
-        this._mapToOrderItem
-      )
+      const newAsksSlabItems = [...Orderbook.decode(this._options.market, accountsData.asks).slab.items(false)]
+      const newAsksOrders = newAsksSlabItems.map(this._mapAskSlabItemToOrder)
 
       if (this._initialized) {
-        for (const ask of newAsksSnapshot) {
-          const message = this._mapNewOrderToMessage(this._asksAccountOrders!, ask, timestamp, slot, l3Diff)
+        const currentAsksMap = new Map(this._asksAccountOrders!.map(this._toMapConstructorStructure))
+
+        for (const ask of newAsksOrders) {
+          const matchingExistingOrder = currentAsksMap.get(ask.orderId)
+          const message = this._mapChangedOrderItemsToMessage(matchingExistingOrder, ask, timestamp, slot, l3Diff)
+
           if (message !== undefined) {
             // unshift as open/change messages should be processed before fill/done
             l3Diff.unshift(message)
@@ -66,17 +105,21 @@ export class DataMapper {
         }
       }
 
-      this._asksAccountOrders = newAsksSnapshot
+      this._asksAccounSlabItems = newAsksSlabItems
+      this._asksAccountOrders = newAsksOrders
     }
 
     if (accountsData.bids !== undefined) {
-      const newBidsSnapshot = [...Orderbook.decode(this._options.market, accountsData.bids).items(true)].map(
-        this._mapToOrderItem
-      )
+      const newBidsSlabItems = [...Orderbook.decode(this._options.market, accountsData.bids).slab.items(true)]
+      const newBidsOrders = newBidsSlabItems.map(this._mapBidSlabItemToOrder)
 
       if (this._initialized) {
-        for (const bid of newBidsSnapshot) {
-          const message = this._mapNewOrderToMessage(this._bidsAccountOrders!, bid, timestamp, slot, l3Diff)
+        const currentBidsMap = new Map(this._bidsAccountOrders!.map(this._toMapConstructorStructure))
+
+        for (const bid of newBidsOrders) {
+          const matchingExistingOrder = currentBidsMap.get(bid.orderId)
+          const message = this._mapChangedOrderItemsToMessage(matchingExistingOrder, bid, timestamp, slot, l3Diff)
+
           if (message !== undefined) {
             // unshift as open/change messages should be processed before fill/done
             l3Diff.unshift(message)
@@ -84,22 +127,30 @@ export class DataMapper {
         }
       }
 
-      this._bidsAccountOrders = newBidsSnapshot
+      this._bidsAccountSlabItems = newBidsSlabItems
+      this._bidsAccountOrders = newBidsOrders
     }
 
     if (this._options.validateL3Diffs && this._initialized && l3Diff.length > 0) {
       this._validateL3DiffCorrectness(l3Diff)
     }
 
-    if (this._asksAccountOrders !== undefined && this._bidsAccountOrders !== undefined) {
+    // initialize only when we have both asks and bids accounts data
+    const shouldInitialize =
+      this._initialized === false && this._asksAccountOrders !== undefined && this._bidsAccountOrders !== undefined
+
+    const snapshotHasChanged =
+      this._initialized === true && (accountsData.asks !== undefined || accountsData.bids !== undefined)
+
+    if (shouldInitialize || snapshotHasChanged) {
       const l3Snapshot: L3Snapshot = {
         type: 'l3snapshot',
         symbol: this._options.symbol,
         timestamp,
         slot,
         market: this._marketAddress,
-        asks: this._asksAccountOrders,
-        bids: this._bidsAccountOrders
+        asks: this._asksAccountOrders!,
+        bids: this._bidsAccountOrders!
       }
 
       const publish = this._initialized === false
@@ -108,20 +159,152 @@ export class DataMapper {
       yield this._putInEnvelope(l3Snapshot, publish)
     }
 
-    for (const message of l3Diff) {
-      yield this._putInEnvelope(message, true)
+    if (this._initialized === false) {
+      return
+    }
+
+    if (this._currentL2Snapshot === undefined) {
+      this._currentL2Snapshot = {
+        asks: this._mapToL2Snapshot(this._asksAccounSlabItems!),
+        bids: this._mapToL2Snapshot(this._bidsAccountSlabItems!)
+      }
+
+      const l2SnapshotMessage: L2 = {
+        type: 'l2snapshot',
+        symbol: this._options.symbol,
+        timestamp,
+        slot,
+        market: this._marketAddress,
+        asks: this._currentL2Snapshot.asks,
+        bids: this._currentL2Snapshot.bids
+      }
+
+      this._currentQuote = {
+        bestAsk: this._currentL2Snapshot.asks[0],
+        bestBid: this._currentL2Snapshot.bids[0]
+      }
+
+      const quoteMessage: Quote = {
+        type: 'quote',
+        symbol: this._options.symbol,
+        timestamp,
+        slot,
+        market: this._marketAddress,
+        bestAsk: this._currentQuote.bestAsk,
+        bestBid: this._currentQuote.bestBid
+      }
+
+      yield this._putInEnvelope(l2SnapshotMessage, true)
+      yield this._putInEnvelope(quoteMessage, true)
+    }
+
+    // if account data has not changed, use current snapshot data
+    // otherwise map new account data to l2
+    const newL2Snapshot = {
+      asks:
+        accountsData.asks !== undefined
+          ? this._mapToL2Snapshot(this._asksAccounSlabItems!)
+          : this._currentL2Snapshot.asks,
+
+      bids:
+        accountsData.bids !== undefined
+          ? this._mapToL2Snapshot(this._bidsAccountSlabItems!)
+          : this._currentL2Snapshot.bids
+    }
+
+    const newQuote = {
+      bestAsk: newL2Snapshot.asks[0],
+      bestBid: newL2Snapshot.bids[0]
+    }
+
+    const asksDiff =
+      accountsData.asks !== undefined ? this._getL2Diff(this._currentL2Snapshot.asks, newL2Snapshot.asks) : []
+
+    const bidsDiff =
+      accountsData.bids !== undefined ? this._getL2Diff(this._currentL2Snapshot.bids, newL2Snapshot.bids) : []
+
+    if (l3Diff.length > 0) {
+      for (const message of l3Diff) {
+        yield this._putInEnvelope(message, true)
+
+        // detect l2 trades based on fills
+        // https://github.com/project-serum/serum-dex-ui/blob/50cbadc3304b24e352307ebbc3a26be714c45f80/src/utils/markets.tsx#L565
+        if (message.type === 'fill' && message.maker) {
+          const tradeMessage: Trade = {
+            type: 'trade',
+            symbol: this._options.symbol,
+            timestamp,
+            slot,
+            market: this._marketAddress,
+            id: message.orderId,
+            side: message.side === 'buy' ? 'sell' : 'buy',
+            price: message.price,
+            size: message.size
+          }
+
+          yield this._putInEnvelope(tradeMessage, true)
+        }
+      }
+    }
+
+    if (asksDiff.length > 0 || bidsDiff.length > 0) {
+      // since we have a diff it means snapshot has changed
+      // so we need to pass new snapshot to minions, just without 'publish' flag
+      this._currentL2Snapshot = newL2Snapshot
+
+      const l2Snapshot: L2 = {
+        type: 'l2snapshot',
+        symbol: this._options.symbol,
+        timestamp,
+        slot,
+        market: this._marketAddress,
+        asks: this._currentL2Snapshot.asks,
+        bids: this._currentL2Snapshot.bids
+      }
+      const l2UpdateMessage: L2 = {
+        type: 'l2update',
+        symbol: this._options.symbol,
+        timestamp,
+        slot,
+        market: this._marketAddress,
+        asks: asksDiff,
+        bids: bidsDiff
+      }
+
+      // first goes update
+      yield this._putInEnvelope(l2UpdateMessage, true)
+      // then snapshot, as new snapshot already includes update
+      yield this._putInEnvelope(l2Snapshot, false)
+
+      const quoteHasChanged =
+        this._l2LevelChanged(this._currentQuote!.bestAsk, newQuote.bestAsk) ||
+        this._l2LevelChanged(this._currentQuote!.bestBid, newQuote.bestBid)
+
+      if (quoteHasChanged) {
+        this._currentQuote = newQuote
+
+        const quoteMessage: Quote = {
+          type: 'quote',
+          symbol: this._options.symbol,
+          timestamp,
+          slot,
+          market: this._marketAddress,
+          bestAsk: this._currentQuote.bestAsk,
+          bestBid: this._currentQuote.bestBid
+        }
+
+        yield this._putInEnvelope(quoteMessage, true)
+      }
     }
   }
 
-  private _mapNewOrderToMessage(
-    existingOrders: OrderItem[],
+  private _mapChangedOrderItemsToMessage(
+    matchingExistingOrder: OrderItem | undefined,
     newOrder: OrderItem,
     timestamp: string,
     slot: string,
     l3Diff: (Open | Fill | Done | Change)[]
   ) {
-    const matchingExistingOrder = existingOrders.find((o) => o.orderId === newOrder.orderId)
-
     if (matchingExistingOrder === undefined) {
       const matchingFills = l3Diff.filter((i) => i.type === 'fill' && i.orderId === newOrder.orderId)
       let size = newOrder.size
@@ -153,6 +336,8 @@ export class DataMapper {
     this._asksAccountOrders = undefined
     this._localBidsOrders = undefined
     this._localAsksOrders = undefined
+    this._currentL2Snapshot = undefined
+    this._currentQuote = undefined
   }
 
   private _validateL3DiffCorrectness(l3Diff: (Open | Fill | Done | Change)[]) {
@@ -258,6 +443,87 @@ export class DataMapper {
     }
   }
 
+  // based on https://github.com/project-serum/serum-ts/blob/525786435d6893c1cc6a670b39a0ba575dd9cca6/packages/serum/src/market.ts#L1389
+  private _mapToL2Snapshot(slabItems: SlabItem[]) {
+    const levels: [BN, BN][] = []
+
+    for (const { key, quantity } of slabItems) {
+      const price = key.ushrn(64)
+
+      if (levels.length > 0 && levels[levels.length - 1]![0].eq(price)) {
+        levels[levels.length - 1]![1].iadd(quantity)
+      } else {
+        levels.push([price, quantity])
+      }
+    }
+
+    return levels.map(this._mapToL2Level)
+  }
+
+  private _getL2Diff(currentLevels: PriceLevel[], newLevels: PriceLevel[]): PriceLevel[] {
+    const currentLevelsMap = new Map(currentLevels)
+
+    const l2Diff: PriceLevel[] = []
+
+    for (const newLevel of newLevels) {
+      const matchingCurrentLevelSize = currentLevelsMap.get(newLevel[0])
+
+      if (matchingCurrentLevelSize !== undefined) {
+        const levelSizeChanged = matchingCurrentLevelSize !== newLevel[1]
+
+        if (levelSizeChanged) {
+          l2Diff.push(newLevel)
+        }
+        // remove from currrent levels map so we know that such level exists in new levels
+        currentLevelsMap.delete(newLevel[0])
+      } else {
+        // completely new price level
+        l2Diff.push(newLevel)
+      }
+    }
+
+    for (const levelToRemove of currentLevelsMap) {
+      const l2Delete: PriceLevel = [levelToRemove[0], this._zeroWithPrecision]
+
+      l2Diff.unshift(l2Delete)
+    }
+
+    return l2Diff
+  }
+
+  private _l2LevelChanged(currentLevel: PriceLevel | undefined, newLevel: PriceLevel | undefined) {
+    if (currentLevel === undefined && newLevel === undefined) {
+      return false
+    }
+
+    if (currentLevel === undefined && newLevel !== undefined) {
+      return true
+    }
+
+    if (currentLevel !== undefined && newLevel === undefined) {
+      return true
+    }
+
+    // price has changed
+    if (currentLevel![0] !== newLevel![0]) {
+      return true
+    }
+
+    // size has changed
+    if (currentLevel![1] !== newLevel![1]) {
+      return true
+    }
+
+    return false
+  }
+
+  private _mapToL2Level = (level: [BN, BN]): PriceLevel => {
+    const price = this._options.market.priceLotsToNumber(level[0]).toFixed(this._options.priceDecimalPlaces)
+    const size = this._options.market.baseSizeLotsToNumber(level[1]).toFixed(this._options.sizeDecimalPlaces)
+
+    return [price, size]
+  }
+
   private _putInEnvelope(message: DataMessage, publish: boolean) {
     const envelope: MessageEnvelope = {
       type: message.type,
@@ -268,6 +534,10 @@ export class DataMapper {
     }
 
     return envelope
+  }
+
+  private _toMapConstructorStructure(orderItem: OrderItem): [string, OrderItem] {
+    return [orderItem.orderId, orderItem]
   }
 
   private _mapEventToDataMessage(
@@ -406,16 +676,30 @@ export class DataMapper {
     }
   }
 
-  private _mapToOrderItem = (order: Order) => {
+  private _mapAskSlabItemToOrder = (slabItem: SlabItem) => {
+    return this._mapToOrderItem(slabItem, false)
+  }
+
+  private _mapBidSlabItemToOrder = (slabItem: SlabItem) => {
+    return this._mapToOrderItem(slabItem, true)
+  }
+
+  // based on https://github.com/project-serum/serum-ts/blob/525786435d6893c1cc6a670b39a0ba575dd9cca6/packages/serum/src/market.ts#L1414
+  private _mapToOrderItem = (
+    { key, clientOrderId, feeTier, ownerSlot, owner, quantity }: SlabItem,
+    isBids: boolean
+  ) => {
+    const price = key.ushrn(64)
+
     const orderItem: OrderItem = {
-      orderId: order.orderId.toString(),
-      clientId: order.clientId ? order.clientId.toString() : undefined,
-      side: order.side,
-      price: order.price.toFixed(this._options.priceDecimalPlaces),
-      size: order.size.toFixed(this._options.sizeDecimalPlaces),
-      account: order.openOrdersAddress.toString(),
-      accountSlot: order.openOrdersSlot,
-      feeTier: order.feeTier
+      orderId: key.toString(),
+      clientId: clientOrderId.toString(),
+      side: isBids ? 'buy' : 'sell',
+      price: this._options.market.priceLotsToNumber(price).toFixed(this._options.priceDecimalPlaces),
+      size: this._options.market.baseSizeLotsToNumber(quantity).toFixed(this._options.sizeDecimalPlaces),
+      account: owner.toString(),
+      accountSlot: ownerSlot,
+      feeTier
     }
 
     return orderItem
@@ -428,4 +712,13 @@ function divideBnToNumber(numerator: BN, denominator: BN): number {
   const rem = numerator.umod(denominator)
   const gcd = rem.gcd(denominator)
   return quotient + rem.div(gcd).toNumber() / denominator.div(gcd).toNumber()
+}
+
+type SlabItem = {
+  ownerSlot: number
+  key: BN
+  owner: PublicKey
+  quantity: BN
+  feeTier: number
+  clientOrderId: BN
 }

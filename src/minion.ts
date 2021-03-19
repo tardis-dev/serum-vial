@@ -78,6 +78,7 @@ class Minion {
   private readonly _l3SnapshotsSerialized: { [symbol: string]: string } = {}
   private readonly _recentTrades: { [symbol: string]: CircularBuffer<string> } = {}
   private readonly _recentTradesSerialized: { [symbol: string]: string | undefined } = {}
+  private readonly _quotesSerialized: { [symbol: string]: string } = {}
 
   constructor(private readonly _nodeEndpoint: string) {
     this._server = this._initServer()
@@ -201,6 +202,10 @@ class Minion {
       this._l3SnapshotsSerialized[message.symbol] = message.payload
     }
 
+    if (message.type === 'quote') {
+      this._quotesSerialized[message.symbol] = message.payload
+    }
+
     if (message.type === 'trade') {
       if (this._recentTrades[message.symbol] === undefined) {
         this._recentTrades[message.symbol] = new CircularBuffer(100)
@@ -271,6 +276,14 @@ class Minion {
           if (request.op === 'subscribe') {
             ws.subscribe(topic)
 
+            if (type === 'quote') {
+              const quote = this._quotesSerialized[market]
+
+              if (quote !== undefined) {
+                ws.send(quote)
+              }
+            }
+
             if (type == 'l2snapshot') {
               const l2Snapshot = this._l2SnapshotsSerialized[market]
 
@@ -278,6 +291,7 @@ class Minion {
                 ws.send(l2Snapshot)
               }
             }
+
             if (type === 'l3snapshot') {
               const l3Snapshot = this._l3SnapshotsSerialized[market]
               if (l3Snapshot !== undefined) {
