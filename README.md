@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/tardis-dev/serum-vial/master/logo.svg">
+
 # serum-vial
 
 [![Version](https://img.shields.io/npm/v/serum-vial.svg)](https://www.npmjs.org/package/serum-vial)
