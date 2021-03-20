@@ -22,8 +22,8 @@ export const ACTIVE_MARKETS = _markets
 
 export const ACTIVE_MARKETS_NAMES = ACTIVE_MARKETS.map((m) => m.name)
 
-if (ACTIVE_MARKETS_NAMES.length !== [...new Set(ACTIVE_MARKETS_NAMES)].length) {
-  throw new Error(
-    "Markets can't have duplicated names as subscriptions allow subscribing by market name, not market address"
-  )
-}
+// if (ACTIVE_MARKETS_NAMES.length !== [...new Set(ACTIVE_MARKETS_NAMES)].length) {
+//   throw new Error(
+//     "Markets can't have duplicated names as subscriptions allow subscribing by market name, not market address"
+//   )
+// }
