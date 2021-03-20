@@ -4,7 +4,7 @@ import fetch from 'node-fetch'
 import AbortController from 'abort-controller'
 import { PassThrough } from 'stream'
 import WebSocket from 'ws'
-import { executeAndRetry } from './helpers'
+import { executeAndRetry, wait } from './helpers'
 import { logger } from './logger'
 
 // simple solana RPC client
@@ -137,6 +137,9 @@ class AccountsChangeNotifications {
   private _slotStartTimestamp: number | undefined = undefined
   private _publishTID: NodeJS.Timer | undefined = undefined
   private _pingTID: NodeJS.Timer | undefined = undefined
+  private _staleConnectionTID: NodeJS.Timer | undefined = undefined
+  private _retriesCount = 0
+  private _receivedMessagesCount = 0
 
   public onAccountsChange: (notification: AccountsNotification) => void = () => {}
   private _disposed: boolean = false
@@ -192,21 +195,28 @@ class AccountsChangeNotifications {
     const ws = new WebSocket(this._options.nodeWssEndpoint)
     ws.onopen = () => {
       this._subscribeToAccountsNotifications(ws)
+      this._subscribeToHeartbeat(ws)
       this._sendPeriodicPings(ws)
+      this._monitorConnectionIfStale(ws)
+
+      logger.log('info', 'Estabilished new RPC WebSocket connection...', { market: this._options.marketName })
     }
 
     ws.onmessage = (event) => {
       if (this._disposed) {
         return
       }
+
       const message = JSON.parse(event.data as any)
 
       if (message.error !== undefined) {
         logger.log('warn', `Received RPC WebSocket error message: ${event.data}`, { market: this._options.marketName })
-        this._restartConnection(ws)
+        ws.terminate()
 
         return
       }
+
+      this._receivedMessagesCount++
 
       if (message.result !== undefined) {
         const matchingAccount = this._accountsMeta.find((a) => a.reqId === message.id)
@@ -249,6 +259,11 @@ class AccountsChangeNotifications {
         return
       }
 
+      if (message.method === 'slotNotification') {
+        // ignore slot notficiations which are only used as a heartbeat message
+        return
+      }
+
       throw new Error(`Unknown message ` + message.method)
     }
 
@@ -262,22 +277,26 @@ class AccountsChangeNotifications {
       logger.log('info', `Received RPC WebSocket close, reason: ${event.reason}, code: ${event.code}`, {
         market: this._options.marketName
       })
-      this._restartConnection(ws)
+
+      this._restartConnection()
     }
   }
 
-  private _restartConnection(ws: WebSocket) {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.terminate()
+  private async _restartConnection() {
+    this.onAccountsChange({ reset: true })
+
+    const delayMs = this._retriesCount > 0 ? this._retriesCount * 50 : 0
+    logger.log('info', 'Restarting RPC WebSocket connection...', { market: this._options.marketName, delayMs })
+
+    if (delayMs > 0) {
+      await wait(delayMs)
     }
 
-    logger.log('info', 'Restarting RPC WebSocket connection...', { market: this._options.marketName })
+    this._retriesCount++
 
     this._wsSubsMeta.clear()
     this._clearTimers()
     this._resetAccountData()
-
-    this.onAccountsChange({ reset: true })
 
     this._connectAndStreamData()
   }
@@ -288,6 +307,10 @@ class AccountsChangeNotifications {
     }
     if (this._pingTID !== undefined) {
       clearInterval(this._pingTID)
+    }
+
+    if (this._staleConnectionTID !== undefined) {
+      clearInterval(this._staleConnectionTID)
     }
   }
 
@@ -304,10 +327,6 @@ class AccountsChangeNotifications {
 
   private _subscribeToAccountsNotifications(ws: WebSocket) {
     for (const meta of this._accountsMeta) {
-      if (ws.readyState !== WebSocket.OPEN) {
-        return
-      }
-
       this._sendMessage(ws, {
         jsonrpc: '2.0',
         id: meta.reqId,
@@ -323,26 +342,48 @@ class AccountsChangeNotifications {
     }
   }
 
+  private _subscribeToHeartbeat(ws: WebSocket) {
+    // Solana RPC has no native heartbeats, so let's use slotNotifications as a workaround
+    this._sendMessage(ws, {
+      jsonrpc: '2.0',
+      id: 999,
+      method: 'slotSubscribe',
+      params: []
+    })
+  }
+
   private _sendPeriodicPings(ws: WebSocket) {
     if (this._pingTID) {
       clearInterval(this._pingTID)
     }
 
     this._pingTID = setInterval(() => {
-      if (ws.readyState !== WebSocket.OPEN) {
-        return
-      }
-
       this._sendMessage(ws, { jsonrpc: '2.0', method: 'ping', params: null })
     }, 5 * 1000)
   }
 
-  private _sendMessage(ws: WebSocket, message: any) {
-    if (ws.readyState !== WebSocket.OPEN) {
-      return
+  private _monitorConnectionIfStale(ws: WebSocket) {
+    if (this._staleConnectionTID) {
+      clearInterval(this._staleConnectionTID)
     }
+    // set up timer that checks against open, but stale connections that do not return any data
+    this._staleConnectionTID = setInterval(() => {
+      if (this._receivedMessagesCount === 0) {
+        logger.log('info', `Did not received any messages within 5s timeout, terminating connection...`)
 
-    ws.send(JSON.stringify(message))
+        ws.terminate()
+      }
+      this._receivedMessagesCount = 0
+    }, 5 * 1000)
+  }
+
+  private _sendMessage(ws: WebSocket, message: any) {
+    ws.send(JSON.stringify(message), (err) => {
+      if (err !== undefined) {
+        logger.log('warning', `WS send error: ${err.message}`)
+        ws.terminate()
+      }
+    })
   }
 
   private _publish = () => {
@@ -355,6 +396,7 @@ class AccountsChangeNotifications {
       })
     }
 
+    this._retriesCount = 0
     this.onAccountsChange({
       accountsData: this._accountsData,
       slot: this._currentSlot!.toString(),

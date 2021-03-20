@@ -32,16 +32,6 @@ process.on('unhandledRejection', (err) => {
   throw err
 })
 
-// https://github.com/uNetworking/uWebSockets.js/issues/465
-let listenSocket: any
-process.on('uncaughtException', (_) => {
-  if (listenSocket !== undefined) {
-    us_listen_socket_close(listenSocket)
-  }
-
-  process.exit(1)
-})
-
 // based on https://github.com/uNetworking/uWebSockets.js/issues/335#issuecomment-643500581
 const RateLimit = (limit: number, interval: number) => {
   let now = 0
@@ -90,7 +80,7 @@ class Minion {
       .ws(`${apiPrefix}/ws`, {
         compression: SHARED_COMPRESSOR,
         maxPayloadLength: 512 * 1024,
-        idleTimeout: 60, // closes WS connection if no message/ping send/received in 60s
+        idleTimeout: 5 * 60, // closes WS connection if no message/ping send/received in 5 minutes
         maxBackpressure: 4 * 1024, // close if client is too slow to read the data fast enough
         message: (ws, message) => {
           this._handleSubscriptionRequest(ws, message)
@@ -105,7 +95,6 @@ class Minion {
     return new Promise<void>((resolve, reject) => {
       this._server.listen(port, (socket) => {
         if (socket) {
-          listenSocket = socket
           logger.log('info', `Listening on port ${port}`, meta)
           resolve()
         } else {
