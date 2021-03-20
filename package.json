@@ -1,6 +1,6 @@
 {
   "name": "serum-vial",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "engines": {
     "node": ">=15"
   },
