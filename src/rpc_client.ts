@@ -22,6 +22,7 @@ export class RPCClient {
 
     var accountsNotifications = new AccountsChangeNotifications(market, {
       nodeWssEndpoint: wssEndpoint.toString(),
+      nodeRestEndpoint: this._options.nodeEndpoint,
       marketName,
       commitment: 'confirmed'
     })
@@ -97,6 +98,7 @@ export class RPCClient {
       }
 
       const data = (await response.json()) as {
+        error: any
         result: {
           context: {
             slot: number
@@ -109,6 +111,10 @@ export class RPCClient {
             rentEpoch: number
           } | null
         }
+      }
+
+      if (data.error !== undefined) {
+        throw new Error(`JSON RPC error: ${JSON.stringify(data.error)}`)
       }
 
       return data
@@ -160,6 +166,7 @@ class AccountsChangeNotifications {
     market: Market,
     private readonly _options: {
       readonly nodeWssEndpoint: string
+      readonly nodeRestEndpoint: string
       readonly marketName: string
       readonly commitment: string
     }
@@ -198,7 +205,26 @@ class AccountsChangeNotifications {
       handshakeTimeout: 15 * 1000
     })
 
-    ws.onopen = () => {
+    ws.onopen = async () => {
+      try {
+        const { accountsData, slot } = await executeAndRetry(async () => this._fetchAccountsSnapshot(), {
+          maxRetries: 10
+        })
+        // fire first account change notification with fetched snapshot data
+        // as some DEX markets aren't very alive yet, hence their WS accountNotifications aren't very frequent
+        // and we want to initialized market as soon as possible
+
+        this.onAccountsChange({
+          accountsData,
+          slot: slot.toString(),
+          reset: false
+        })
+
+        this._currentSlot = slot
+      } catch (err) {
+        logger.log('warn', `Failed to fetch accounts snapshot, ${err.message}`, { market: this._options.marketName })
+      }
+
       this._subscribeToAccountsNotifications(ws)
       this._subscribeToHeartbeat(ws)
       this._sendPeriodicPings(ws)
@@ -284,6 +310,73 @@ class AccountsChangeNotifications {
       })
 
       this._restartConnection()
+    }
+  }
+
+  private async _fetchAccountsSnapshot() {
+    const controller = new AbortController()
+
+    const requestTimeout = setTimeout(() => {
+      controller.abort()
+    }, 5000)
+
+    try {
+      const response = await fetch(this._options.nodeRestEndpoint, {
+        signal: controller.signal,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getMultipleAccounts',
+          params: [
+            this._accountsMeta.map((a) => a.address),
+            {
+              encoding: 'base64'
+            }
+          ]
+        })
+      })
+
+      if (!response.ok) {
+        let errorText = ''
+        try {
+          errorText += await response.text()
+        } catch {}
+        throw new Error(errorText)
+      }
+
+      const data = (await response.json()) as {
+        error: any
+        result: {
+          context: {
+            slot: number
+          }
+          value: {
+            data: [string, 'base64']
+          }[]
+        }
+      }
+
+      if (data.error !== undefined) {
+        throw new Error(`JSON RPC error: ${JSON.stringify(data.error)}`)
+      }
+
+      const accountsData: AccountsData = {}
+
+      for (let i = 0; i < data.result.value.length; i++) {
+        const accountName = this._accountsMeta[i]!.name
+        accountsData[accountName] = Buffer.from(data.result.value[i]!.data[0], 'base64')
+      }
+
+      return {
+        accountsData,
+        slot: data.result.context.slot
+      }
+    } finally {
+      clearTimeout(requestTimeout)
     }
   }
 
@@ -374,14 +467,14 @@ class AccountsChangeNotifications {
     // set up timer that checks against open, but stale connections that do not return any data
     this._staleConnectionTID = setInterval(() => {
       if (this._receivedMessagesCount === 0) {
-        logger.log('info', `Did not received any messages within 5s timeout, terminating connection...`, {
+        logger.log('info', `Did not received any messages within 6s timeout, terminating connection...`, {
           market: this._options.marketName
         })
 
         ws.terminate()
       }
       this._receivedMessagesCount = 0
-    }, 5 * 1000)
+    }, 6 * 1000)
   }
 
   private _sendMessage(ws: WebSocket, message: any) {
@@ -427,7 +520,7 @@ class AccountsChangeNotifications {
   }
 
   private _restartPublishTimer() {
-    // wait up to 6s for remaining accounts notifications
+    // wait up to 4s for remaining accounts notifications
     // this handles scenario when there was for example only 'asks' account notification
     // for a given slot so we still wait for remaining accounts notifications and there is no changes
     // for next slots for tracked accounts
@@ -440,7 +533,7 @@ class AccountsChangeNotifications {
 
     this._publishTID = setTimeout(() => {
       this._publish()
-    }, 6000)
+    }, 4000)
   }
 
   private _receivedDataForAllAccounts() {
@@ -488,8 +581,15 @@ class AccountsChangeNotifications {
     }
 
     if (this._state === 'PRISTINE') {
-      this._currentSlot = slot
-      this._state = 'PENDING'
+      if (this._currentSlot === slot) {
+        // in case we fetched accounts data via REST API and WS account notification is published for such snapshot already
+        // let's skip it as we alrady processed it's data from REST accounts snapshot
+        logger.log('warn', 'Ignoring WS account notification', { market: this._options.marketName })
+        return
+      } else {
+        this._currentSlot = slot
+        this._state = 'PENDING'
+      }
     }
 
     if (this._state === 'PENDING') {
