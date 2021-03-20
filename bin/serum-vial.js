@@ -30,6 +30,11 @@ const argv = yargs
     choices: ['debug', 'info', 'warn', 'error'],
     default: 'info'
   })
+  .option('minions-count', {
+    type: 'number',
+    describe: 'Minions worker threads count',
+    default: 1
+  })
   .option('validate-l3-diffs', {
     type: 'boolean',
     describe: 'Validate correctness of produced L3 data diffs',
@@ -53,7 +58,8 @@ async function start() {
   await bootServer({
     port,
     nodeEndpoint: argv['endpoint'],
-    validateL3Diffs: argv['validate-l3-diffs']
+    validateL3Diffs: argv['validate-l3-diffs'],
+    minionsCount: argv['minions-count']
   })
 
   if (isDocker()) {

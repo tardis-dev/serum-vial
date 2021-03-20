@@ -48,9 +48,9 @@ export class SerumProducer {
 
     for await (const notification of rpcClient.streamAccountsNotification(market, this._options.marketName)) {
       if (started === false) {
-        serumProducerReadyChannel.postMessage('ready')
         logger.log('info', `Serum producer started for ${this._options.marketName} market...`)
         started = true
+        serumProducerReadyChannel.postMessage('ready')
       }
 
       if (notification.reset) {

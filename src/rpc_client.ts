@@ -490,12 +490,15 @@ class AccountsChangeNotifications {
     this._state = 'PUBLISHED'
 
     const now = new Date().valueOf()
-    const slotTimespan = now - this._slotStartTimestamp!
 
-    if (slotTimespan > 400) {
-      logger.log('debug', `Slow accounts notification, slot ${this._currentSlot}, ${slotTimespan}ms`, {
-        market: this._options.marketName
-      })
+    if (this._slotStartTimestamp !== undefined) {
+      const slotTimespan = now - this._slotStartTimestamp
+
+      if (slotTimespan > 400) {
+        logger.log('debug', `Slow accounts notification, slot ${this._currentSlot}, ${slotTimespan}ms`, {
+          market: this._options.marketName
+        })
+      }
     }
 
     this._retriesCount = 0
@@ -512,6 +515,7 @@ class AccountsChangeNotifications {
       bids: undefined,
       eventQueue: undefined
     }
+    this._slotStartTimestamp = undefined
 
     if (this._publishTID !== undefined) {
       clearTimeout(this._publishTID)
@@ -589,6 +593,8 @@ class AccountsChangeNotifications {
       } else {
         this._currentSlot = slot
         this._state = 'PENDING'
+
+        this._slotStartTimestamp = new Date().valueOf()
       }
     }
 
@@ -596,10 +602,6 @@ class AccountsChangeNotifications {
       this._restartPublishTimer()
       // event for the same slot, just update the data for account
       if (slot === this._currentSlot) {
-        if (this._slotStartTimestamp === undefined) {
-          this._slotStartTimestamp = new Date().valueOf()
-        }
-
         if (this._accountsData[accountName] !== undefined) {
           throw new Error(
             `Received second update for ${accountName} account for slot ${slot}, market ${this._options.marketName}`
