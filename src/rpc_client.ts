@@ -133,7 +133,11 @@ export class RPCClient {
 class AccountsChangeNotifications {
   private _currentSlot: number | undefined = undefined
   private _state: 'PRISTINE' | 'PENDING' | 'PUBLISHED' = 'PRISTINE'
-  private _accountsData!: AccountsData
+  private _accountsData: AccountsData = {
+    asks: undefined,
+    bids: undefined,
+    eventQueue: undefined
+  }
   private _slotStartTimestamp: number | undefined = undefined
   private _publishTID: NodeJS.Timer | undefined = undefined
   private _pingTID: NodeJS.Timer | undefined = undefined
@@ -177,8 +181,6 @@ class AccountsChangeNotifications {
         address: (market as any)._decoded.eventQueue.toBase58()
       }
     ]
-
-    this._resetAccountData()
     this._connectAndStreamData()
   }
 
@@ -192,7 +194,10 @@ class AccountsChangeNotifications {
       return
     }
 
-    const ws = new WebSocket(this._options.nodeWssEndpoint)
+    const ws = new WebSocket(this._options.nodeWssEndpoint, {
+      handshakeTimeout: 15 * 1000
+    })
+
     ws.onopen = () => {
       this._subscribeToAccountsNotifications(ws)
       this._subscribeToHeartbeat(ws)
@@ -316,8 +321,8 @@ class AccountsChangeNotifications {
 
   private _resetAccountData() {
     this._accountsData = {
-      bids: undefined,
       asks: undefined,
+      bids: undefined,
       eventQueue: undefined
     }
     this._slotStartTimestamp = undefined
@@ -369,7 +374,9 @@ class AccountsChangeNotifications {
     // set up timer that checks against open, but stale connections that do not return any data
     this._staleConnectionTID = setInterval(() => {
       if (this._receivedMessagesCount === 0) {
-        logger.log('info', `Did not received any messages within 5s timeout, terminating connection...`)
+        logger.log('info', `Did not received any messages within 5s timeout, terminating connection...`, {
+          market: this._options.marketName
+        })
 
         ws.terminate()
       }
@@ -387,6 +394,8 @@ class AccountsChangeNotifications {
   }
 
   private _publish = () => {
+    this._state = 'PUBLISHED'
+
     const now = new Date().valueOf()
     const slotTimespan = now - this._slotStartTimestamp!
 
@@ -397,20 +406,24 @@ class AccountsChangeNotifications {
     }
 
     this._retriesCount = 0
+
     this.onAccountsChange({
       accountsData: this._accountsData,
       slot: this._currentSlot!.toString(),
       reset: false
     })
 
-    this._resetAccountData()
+    // clear pending accounts data
+    this._accountsData = {
+      asks: undefined,
+      bids: undefined,
+      eventQueue: undefined
+    }
 
     if (this._publishTID !== undefined) {
       clearTimeout(this._publishTID)
       this._publishTID = undefined
     }
-
-    this._state = 'PUBLISHED'
   }
 
   private _restartPublishTimer() {
@@ -441,6 +454,7 @@ class AccountsChangeNotifications {
   private _resetPendingNotificationState() {
     // we had out of order notification, let's clear pending accounts data state
     this._resetAccountData()
+
     if (this._publishTID !== undefined) {
       clearTimeout(this._publishTID)
     }
