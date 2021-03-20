@@ -38,8 +38,8 @@
   ],
   "license": "MPL-2.0",
   "dependencies": {
-    "@project-serum/serum": "^0.13.25",
-    "@solana/web3.js": "^0.96.0",
+    "@project-serum/serum": "^0.13.30",
+    "@solana/web3.js": "^1.0.0",
     "@types/bintrees": "^1.0.3",
     "@types/bn.js": "^5.1.0",
     "abort-controller": "^3.0.0",
