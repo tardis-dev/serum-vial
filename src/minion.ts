@@ -1,14 +1,6 @@
 import { Market } from '@project-serum/serum'
 import { Connection } from '@solana/web3.js'
-import {
-  App,
-  HttpRequest,
-  HttpResponse,
-  SHARED_COMPRESSOR,
-  TemplatedApp,
-  WebSocket,
-  us_listen_socket_close
-} from 'uWebSockets.js'
+import { App, HttpRequest, HttpResponse, SHARED_COMPRESSOR, TemplatedApp, WebSocket } from 'uWebSockets.js'
 import { isMainThread, threadId, workerData } from 'worker_threads'
 import { CHANNELS, MESSAGE_TYPES_PER_CHANNEL, OPS } from './consts'
 import { CircularBuffer, getAllowedValuesText, getDidYouMean, minionReadyChannel, serumDataChannel } from './helpers'
