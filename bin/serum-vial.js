@@ -82,19 +82,25 @@ async function start() {
     }
   }
 
-  await bootServer({
+  const options = {
     port,
     nodeEndpoint: argv['endpoint'],
     validateL3Diffs: argv['validate-l3-diffs'],
     minionsCount: argv['minions-count'],
-    commitment: argv['commitment'],
+    commitment: argv['commitment']
+  }
+
+  logger.log('info', 'Starting serum-vial server with options', options)
+
+  await bootServer({
+    ...options,
     markets
   })
 
   if (isDocker()) {
-    logger.log('info', `serum-vial v${pkg.version} is running inside Docker container.`)
+    logger.log('info', `Serum-vial v${pkg.version} is running inside Docker container.`)
   } else {
-    logger.log('info', `serum-vial server v${pkg.version} is running on port ${port}.`)
+    logger.log('info', `Serum-vial server v${pkg.version} is running on port ${port}.`)
   }
 
   logger.log('info', `See https://github.com/tardis-dev/serum-vial for more information.`)
