@@ -228,16 +228,17 @@ export class DataMapper {
         yield this._putInEnvelope(message, true)
 
         // detect l2 trades based on fills
-        // https://github.com/project-serum/serum-dex-ui/blob/50cbadc3304b24e352307ebbc3a26be714c45f80/src/utils/markets.tsx#L565
-        if (message.type === 'fill' && message.maker) {
+        if (message.type === 'fill' && message.maker === false) {
+          const tradeId = `${message.orderId}|${message.size}|${timestamp}`
+
           const tradeMessage: Trade = {
             type: 'trade',
             symbol: this._options.symbol,
             timestamp,
             slot,
             version: this._version,
-            id: message.orderId,
-            side: message.side === 'buy' ? 'sell' : 'buy',
+            id: tradeId,
+            side: message.side,
             price: message.price,
             size: message.size
           }
