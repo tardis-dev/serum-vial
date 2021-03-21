@@ -1,4 +1,4 @@
-import { EVENT_QUEUE_LAYOUT, Market, Orderbook } from '@project-serum/serum'
+import { EVENT_QUEUE_LAYOUT, Market, Orderbook, getLayoutVersion } from '@project-serum/serum'
 import { Event } from '@project-serum/serum/lib/queue'
 import { PublicKey } from '@solana/web3.js'
 import BN from 'bn.js'
@@ -49,7 +49,7 @@ export class DataMapper {
       }
     | undefined = undefined
 
-  private readonly _marketAddress: string
+  private readonly _version: number
   private _zeroWithPrecision: string
 
   constructor(
@@ -61,12 +61,12 @@ export class DataMapper {
       readonly validateL3Diffs: boolean
     }
   ) {
-    this._marketAddress = this._options.market.address.toString()
+    this._version = getLayoutVersion(this._options.market.programId) as number
     const zero = 0
     this._zeroWithPrecision = zero.toFixed(this._options.sizeDecimalPlaces)
   }
 
-  public *map(accountsData: AccountsData, slot: string): IterableIterator<MessageEnvelope> {
+  public *map(accountsData: AccountsData, slot: number): IterableIterator<MessageEnvelope> {
     // the same timestamp for all messages received in single notification
     const timestamp = new Date().toISOString()
 
@@ -148,7 +148,7 @@ export class DataMapper {
         symbol: this._options.symbol,
         timestamp,
         slot,
-        market: this._marketAddress,
+        version: this._version,
         asks: this._asksAccountOrders!,
         bids: this._bidsAccountOrders!
       }
@@ -174,7 +174,7 @@ export class DataMapper {
         symbol: this._options.symbol,
         timestamp,
         slot,
-        market: this._marketAddress,
+        version: this._version,
         asks: this._currentL2Snapshot.asks,
         bids: this._currentL2Snapshot.bids
       }
@@ -189,7 +189,7 @@ export class DataMapper {
         symbol: this._options.symbol,
         timestamp,
         slot,
-        market: this._marketAddress,
+        version: this._version,
         bestAsk: this._currentQuote.bestAsk,
         bestBid: this._currentQuote.bestBid
       }
@@ -235,7 +235,7 @@ export class DataMapper {
             symbol: this._options.symbol,
             timestamp,
             slot,
-            market: this._marketAddress,
+            version: this._version,
             id: message.orderId,
             side: message.side === 'buy' ? 'sell' : 'buy',
             price: message.price,
@@ -257,7 +257,7 @@ export class DataMapper {
         symbol: this._options.symbol,
         timestamp,
         slot,
-        market: this._marketAddress,
+        version: this._version,
         asks: this._currentL2Snapshot.asks,
         bids: this._currentL2Snapshot.bids
       }
@@ -266,7 +266,7 @@ export class DataMapper {
         symbol: this._options.symbol,
         timestamp,
         slot,
-        market: this._marketAddress,
+        version: this._version,
         asks: asksDiff,
         bids: bidsDiff
       }
@@ -288,7 +288,7 @@ export class DataMapper {
           symbol: this._options.symbol,
           timestamp,
           slot,
-          market: this._marketAddress,
+          version: this._version,
           bestAsk: this._currentQuote.bestAsk,
           bestBid: this._currentQuote.bestBid
         }
@@ -302,7 +302,7 @@ export class DataMapper {
     matchingExistingOrder: OrderItem | undefined,
     newOrder: OrderItem,
     timestamp: string,
-    slot: string,
+    slot: number,
     l3Diff: (Open | Fill | Done | Change)[]
   ) {
     if (matchingExistingOrder === undefined) {
@@ -543,14 +543,14 @@ export class DataMapper {
   private _mapEventToDataMessage(
     event: Event,
     timestamp: string,
-    slot: string,
+    slot: number,
     fillsIds: string[]
   ): Fill | Done | Change | undefined {
     const clientId = (event as any).clientOrderId ? (event as any).clientOrderId.toString() : undefined
 
     const side = event.eventFlags.bid ? 'buy' : 'sell'
     const orderId = event.orderId.toString()
-    const openOrdersAccount = event.openOrders.toString()
+    const openOrdersAccount = event.openOrders.toBase58()
     const openOrdersSlot = event.openOrdersSlot
     const feeTier = event.feeTier
 
@@ -560,7 +560,7 @@ export class DataMapper {
         symbol: this._options.symbol,
         timestamp,
         slot,
-        market: this._marketAddress,
+        version: this._version,
         orderId,
         clientId,
         side,
@@ -583,7 +583,7 @@ export class DataMapper {
         symbol: this._options.symbol,
         timestamp,
         slot,
-        market: this._marketAddress,
+        version: this._version,
         orderId,
         clientId,
         side,
@@ -653,25 +653,25 @@ export class DataMapper {
   }
 
   private _mapToOrderMessage(
-    { orderId, clientId, side, price, account: openOrders, accountSlot: openOrdersSlot, feeTier }: OrderItem,
+    { orderId, clientId, side, price, account, accountSlot, feeTier }: OrderItem,
     type: 'open' | 'change',
     size: string,
     timestamp: string,
-    slot: string
+    slot: number
   ): Open | Change {
     return {
       type,
       symbol: this._options.symbol,
       timestamp,
       slot,
-      market: this._marketAddress,
+      version: this._version,
       orderId,
       clientId,
       side,
       price,
       size,
-      account: openOrders,
-      accountSlot: openOrdersSlot,
+      account,
+      accountSlot,
       feeTier
     }
   }
@@ -697,7 +697,7 @@ export class DataMapper {
       side: isBids ? 'buy' : 'sell',
       price: this._options.market.priceLotsToNumber(price).toFixed(this._options.priceDecimalPlaces),
       size: this._options.market.baseSizeLotsToNumber(quantity).toFixed(this._options.sizeDecimalPlaces),
-      account: owner.toString(),
+      account: owner.toBase58(),
       accountSlot: ownerSlot,
       feeTier
     }

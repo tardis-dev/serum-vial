@@ -19,8 +19,8 @@ export interface Message {
 
 export interface DataMessage extends Message {
   readonly symbol: string
-  readonly market: string
-  readonly slot: string
+  readonly version: number
+  readonly slot: number
 }
 
 export interface ErrorResponse extends Message {

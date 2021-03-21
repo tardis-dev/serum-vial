@@ -216,7 +216,7 @@ class AccountsChangeNotifications {
 
         this.onAccountsChange({
           accountsData,
-          slot: slot.toString(),
+          slot,
           reset: false
         })
 
@@ -505,7 +505,7 @@ class AccountsChangeNotifications {
 
     this.onAccountsChange({
       accountsData: this._accountsData,
-      slot: this._currentSlot!.toString(),
+      slot: this._currentSlot!,
       reset: false
     })
 
@@ -636,7 +636,7 @@ export type AccountsNotification =
     }
   | {
       readonly accountsData: AccountsData
-      readonly slot: string
+      readonly slot: number
       readonly reset: false
     }
 
