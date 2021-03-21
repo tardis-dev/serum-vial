@@ -526,9 +526,7 @@ export class DataMapper {
   }
 
   private _putInEnvelope(message: DataMessage, publish: boolean) {
-    if (this._options.validateL3Diffs) {
-      ;(message as any).outTimestamp = new Date().toISOString()
-    }
+    ;(message as any).outTimestamp = new Date().toISOString()
 
     const envelope: MessageEnvelope = {
       type: message.type,
