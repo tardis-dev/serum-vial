@@ -3,7 +3,7 @@ import { Event } from '@project-serum/serum/lib/queue'
 import { PublicKey } from '@solana/web3.js'
 import BN from 'bn.js'
 import { logger } from './logger'
-import { AccountsData } from './rpc_client'
+import { AccountsNotificationPayload } from './rpc_client'
 import { MessageEnvelope } from './serum_producer'
 import {
   Change,
@@ -66,7 +66,7 @@ export class DataMapper {
     this._zeroWithPrecision = zero.toFixed(this._options.sizeDecimalPlaces)
   }
 
-  public *map(accountsData: AccountsData, slot: number): IterableIterator<MessageEnvelope> {
+  public *map({ accountsData, slot }: AccountsNotificationPayload): IterableIterator<MessageEnvelope> {
     // the same timestamp for all messages received in single notification
     const timestamp = new Date().toISOString()
 

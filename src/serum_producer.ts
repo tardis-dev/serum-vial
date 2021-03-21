@@ -1,5 +1,5 @@
 import { Market } from '@project-serum/serum'
-import { isMainThread, threadId, workerData } from 'worker_threads'
+import { isMainThread, workerData } from 'worker_threads'
 import { MessageType } from './consts'
 import { DataMapper } from './data_mapper'
 import { decimalPlaces, serumDataChannel, serumProducerReadyChannel } from './helpers'
@@ -56,7 +56,7 @@ export class SerumProducer {
       if (notification.reset) {
         dataMapper.reset()
       } else {
-        for (const message of dataMapper.map(notification.accountsData, notification.slot)) {
+        for (const message of dataMapper.map(notification)) {
           onData(message)
         }
       }

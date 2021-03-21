@@ -394,7 +394,7 @@ class AccountsChangeNotifications {
 
     this._wsSubsMeta.clear()
     this._clearTimers()
-    this._resetAccountData()
+    this._resetCurrentState()
 
     this._connectAndStreamData()
   }
@@ -412,7 +412,7 @@ class AccountsChangeNotifications {
     }
   }
 
-  private _resetAccountData() {
+  private _resetCurrentState() {
     this._accountsData = {
       asks: undefined,
       bids: undefined,
@@ -550,7 +550,7 @@ class AccountsChangeNotifications {
 
   private _resetPendingNotificationState() {
     // we had out of order notification, let's clear pending accounts data state
-    this._resetAccountData()
+    this._resetCurrentState()
 
     if (this._publishTID !== undefined) {
       clearTimeout(this._publishTID)
@@ -616,7 +616,7 @@ class AccountsChangeNotifications {
       } else if (slot > this._currentSlot!) {
         // we received data for next slot, let's publish data for current slot
         this._publish()
-        // and run the update again
+        // and run the update again as it's an update for new slot
         this._update(accountName, accountData, slot)
       } else {
         logger.log(
@@ -634,12 +634,13 @@ export type AccountsNotification =
   | {
       readonly reset: true
     }
-  | {
-      readonly accountsData: AccountsData
-      readonly slot: number
-      readonly reset: false
-    }
+  | AccountsNotificationPayload
 
+export type AccountsNotificationPayload = {
+  readonly accountsData: AccountsData
+  readonly slot: number
+  readonly reset: false
+}
 export type AccountName = 'bids' | 'asks' | 'eventQueue'
 export type AccountsData = {
   [key in AccountName]?: Buffer
