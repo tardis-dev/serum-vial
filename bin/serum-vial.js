@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const path = require('path')
 const yargs = require('yargs')
 const isDocker = require('is-docker')
 const pkg = require('../package.json')
@@ -69,14 +70,16 @@ process.env.LOG_LEVEL = argv['log-level']
 const { bootServer, logger, getDefaultMarkets } = require('../dist')
 
 async function start() {
-  let markets
-
-  try {
-    const customMarketsJsonPath = argv['markets-json']
-    markets = require(marketsPath)
-    logger.log(`Loaded custom markets from  ${customMarketsJsonPath}`)
-  } catch {
-    markets = getDefaultMarkets()
+  let markets = getDefaultMarkets()
+  const marketsJsonPath = argv['markets-json']
+  if (marketsJsonPath) {
+    try {
+      const fullPath = path.join(process.cwd(), argv['markets-json'])
+      markets = require(fullPath)
+      logger.log('info', `Loaded custom markets from ${fullPath}`)
+    } catch {
+      markets = getDefaultMarkets()
+    }
   }
 
   await bootServer({
