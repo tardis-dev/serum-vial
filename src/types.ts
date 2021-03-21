@@ -124,3 +124,10 @@ export type SerumListMarketItem = {
   supportsReferralFees: boolean
   supportsSrmFeeDiscounts: boolean
 }
+
+export type SerumMarket = {
+  address: string
+  name: string
+  programId: string
+  deprecated: boolean
+}

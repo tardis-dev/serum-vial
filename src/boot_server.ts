@@ -3,9 +3,16 @@ import path from 'path'
 import { Worker } from 'worker_threads'
 import { minionReadyChannel, serumProducerReadyChannel, wait } from './helpers'
 import { logger } from './logger'
-import { ACTIVE_MARKETS_NAMES } from './markets'
+import { SerumMarket } from './types'
 
-export async function bootServer({ port, nodeEndpoint, validateL3Diffs, minionsCount }: BootOptions) {
+export async function bootServer({
+  port,
+  nodeEndpoint,
+  validateL3Diffs,
+  minionsCount,
+  markets,
+  commitment
+}: BootOptions) {
   // multi core support is linux only feature which allows multiple threads to bind to the same port
   // see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/
   const MINIONS_COUNT = os.platform() === 'linux' ? minionsCount : 1
@@ -20,7 +27,9 @@ export async function bootServer({ port, nodeEndpoint, validateL3Diffs, minionsC
   // start minions workers and wait until all are ready
 
   for (let i = 0; i < MINIONS_COUNT; i++) {
-    const minionWorker = new Worker(path.resolve(__dirname, 'minion.js'), { workerData: { nodeEndpoint, port } })
+    const minionWorker = new Worker(path.resolve(__dirname, 'minion.js'), {
+      workerData: { nodeEndpoint, port, markets }
+    })
 
     minionWorker.on('error', (err) => {
       logger.log('error', `Minion worker ${minionWorker.threadId} error occured: ${err.message} ${err.stack}`)
@@ -42,18 +51,15 @@ export async function bootServer({ port, nodeEndpoint, validateL3Diffs, minionsC
     resolve()
   })
 
-  logger.log(
-    'info',
-    `Starting serum producers for ${ACTIVE_MARKETS_NAMES.length} markets, rpc endpoint: ${nodeEndpoint}`
-  )
+  logger.log('info', `Starting serum producers for ${markets.length} markets, rpc endpoint: ${nodeEndpoint}`)
 
   let readyProducersCount = 0
 
   serumProducerReadyChannel.onmessage = () => readyProducersCount++
 
-  for (const marketName of ACTIVE_MARKETS_NAMES) {
+  for (const market of markets) {
     const serumProducerWorker = new Worker(path.resolve(__dirname, 'serum_producer.js'), {
-      workerData: { marketName, nodeEndpoint, validateL3Diffs }
+      workerData: { marketName: market.name, nodeEndpoint, validateL3Diffs, markets, commitment }
     })
 
     serumProducerWorker.on('error', (err) => {
@@ -74,7 +80,7 @@ export async function bootServer({ port, nodeEndpoint, validateL3Diffs, minionsC
 
   await new Promise<void>(async (resolve) => {
     while (true) {
-      if (readyProducersCount === ACTIVE_MARKETS_NAMES.length) {
+      if (readyProducersCount === markets.length) {
         break
       }
       await wait(100)
@@ -89,4 +95,6 @@ type BootOptions = {
   nodeEndpoint: string
   validateL3Diffs: boolean
   minionsCount: number
+  commitment: string
+  markets: SerumMarket[]
 }

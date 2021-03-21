@@ -526,8 +526,6 @@ export class DataMapper {
   }
 
   private _putInEnvelope(message: DataMessage, publish: boolean) {
-    ;(message as any).outTimestamp = new Date().toISOString()
-
     const envelope: MessageEnvelope = {
       type: message.type,
       symbol: message.symbol,

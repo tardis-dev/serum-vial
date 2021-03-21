@@ -1,5 +1,7 @@
 import { MARKETS } from '@project-serum/serum'
 import didYouMean from 'didyoumean2'
+import { logger } from './logger'
+import { SerumMarket } from './types'
 
 export const wait = (delayMS: number) => new Promise((resolve) => setTimeout(resolve, delayMS))
 
@@ -106,4 +108,30 @@ export async function executeAndRetry<T>(
       await wait(500 * attempts * attempts)
     }
   }
+}
+
+export function getDefaultMarkets(): SerumMarket[] {
+  const defaultMarkets: SerumMarket[] = []
+
+  for (const market of MARKETS) {
+    if (market.deprecated) {
+      continue
+    }
+
+    if (defaultMarkets.some((s) => s.name === market.name)) {
+      logger.log('warn', `Skipping market ${market.name} as one with the same name already exists`, {
+        existingMarket: defaultMarkets.find((s) => s.name === market.name),
+        skippedMarket: market
+      })
+    }
+
+    defaultMarkets.push({
+      name: market.name,
+      address: market.address.toBase58(),
+      programId: market.programId.toBase58(),
+      deprecated: false
+    })
+  }
+
+  return defaultMarkets
 }
