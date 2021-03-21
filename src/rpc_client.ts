@@ -9,7 +9,7 @@ import { logger } from './logger'
 
 // simple solana RPC client
 export class RPCClient {
-  constructor(private readonly _options: { readonly nodeEndpoint: string }) {}
+  constructor(private readonly _options: { readonly nodeEndpoint: string; readonly commitment: string }) {}
 
   public async *streamAccountsNotification(market: Market, marketName: string): AsyncIterable<AccountsNotification> {
     const wssEndpoint = new URL(this._options.nodeEndpoint)
@@ -24,7 +24,7 @@ export class RPCClient {
       nodeWssEndpoint: wssEndpoint.toString(),
       nodeRestEndpoint: this._options.nodeEndpoint,
       marketName,
-      commitment: 'confirmed'
+      commitment: this._options.commitment
     })
 
     accountsNotifications.onAccountsChange = (notification) => {

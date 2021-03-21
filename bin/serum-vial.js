@@ -20,7 +20,7 @@ const argv = yargs
 
   .option('endpoint', {
     type: 'string',
-    describe: 'Serum node endpoint',
+    describe: 'Solana node endpoint',
     default: DEFAULT_NODE_ENDPOINT
   })
 
@@ -32,13 +32,27 @@ const argv = yargs
   })
   .option('minions-count', {
     type: 'number',
-    describe: 'Minions worker threads count',
+    describe: 'Minions worker threads count (handle WS pub/sub)',
     default: 1
   })
+
   .option('validate-l3-diffs', {
     type: 'boolean',
-    describe: 'Validate correctness of produced L3 data diffs',
+    describe: 'turn on validation of L3 diffs correctness (can impact perf)',
     default: false
+  })
+
+  .option('commitment', {
+    type: 'string',
+    describe: 'Solana commitment level to use when communicating with RPC node',
+    choices: ['processed', 'confirmed'],
+    default: 'confirmed'
+  })
+
+  .option('markets-json', {
+    type: 'string',
+    describe: 'Custom market.json definition file',
+    default: ''
   })
 
   .help()
@@ -52,14 +66,26 @@ const argv = yargs
 const port = process.env.PORT ? +process.env.PORT : argv['port']
 process.env.LOG_LEVEL = argv['log-level']
 
-const { bootServer, logger } = require('../dist')
+const { bootServer, logger, getDefaultMarkets } = require('../dist')
 
 async function start() {
+  let markets
+
+  try {
+    const customMarketsJsonPath = argv['markets-json']
+    markets = require(marketsPath)
+    logger.log(`Loaded custom markets from  ${customMarketsJsonPath}`)
+  } catch {
+    markets = getDefaultMarkets()
+  }
+
   await bootServer({
     port,
     nodeEndpoint: argv['endpoint'],
     validateL3Diffs: argv['validate-l3-diffs'],
-    minionsCount: argv['minions-count']
+    minionsCount: argv['minions-count'],
+    commitment: argv['commitment'],
+    markets
   })
 
   if (isDocker()) {
