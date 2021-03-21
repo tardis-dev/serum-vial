@@ -1,6 +1,5 @@
 import { MARKETS } from '@project-serum/serum'
 import didYouMean from 'didyoumean2'
-import { logger } from './logger'
 import { SerumMarket } from './types'
 
 export const wait = (delayMS: number) => new Promise((resolve) => setTimeout(resolve, delayMS))
@@ -90,6 +89,7 @@ const { BroadcastChannel } = require('worker_threads')
 export const minionReadyChannel = new BroadcastChannel('MinionReady') as BroadcastChannel
 export const serumProducerReadyChannel = new BroadcastChannel('SerumProducerReady') as BroadcastChannel
 export const serumDataChannel = new BroadcastChannel('SerumData') as BroadcastChannel
+export const serumMarketsChannel = new BroadcastChannel('SerumMarkets') as BroadcastChannel
 
 export async function executeAndRetry<T>(
   operation: (attempt: number) => Promise<T>,
@@ -119,10 +119,7 @@ export function getDefaultMarkets(): SerumMarket[] {
     }
 
     if (defaultMarkets.some((s) => s.name === market.name)) {
-      logger.log('warn', `Skipping market ${market.name} as one with the same name already exists`, {
-        existingMarket: defaultMarkets.find((s) => s.name === market.name),
-        skippedMarket: market
-      })
+      continue
     }
 
     defaultMarkets.push({

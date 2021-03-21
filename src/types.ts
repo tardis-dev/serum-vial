@@ -117,12 +117,15 @@ export type L3DataMessage = Open | Fill | Done | L3Snapshot | Change
 export type SerumListMarketItem = {
   symbol: string
   address: string
+  baseCurrency: string
+  quoteCurrency: string
+  version: number
   programId: string
+  baseMintAddress: string
+  quoteMintAddress: string
   tickSize: number
   minOrderSize: number
   deprecated: boolean
-  supportsReferralFees: boolean
-  supportsSrmFeeDiscounts: boolean
 }
 
 export type SerumMarket = {

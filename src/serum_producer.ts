@@ -36,7 +36,7 @@ export class SerumProducer {
 
   public async run(onData: OnDataCallback) {
     let started = false
-    logger.log('info', `Serum producer starting for ${this._options.marketName} market...`, { options: this._options })
+    logger.log('info', `Serum producer starting for ${this._options.marketName} market...`)
 
     const marketMeta = this._options.markets.find((m) => m.name == this._options.marketName)!
 

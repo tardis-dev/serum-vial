@@ -1,13 +1,19 @@
-import { Market } from '@project-serum/serum'
-import { Connection } from '@solana/web3.js'
+import { Market, getLayoutVersion } from '@project-serum/serum'
+import { Connection, PublicKey } from '@solana/web3.js'
 import { App, HttpRequest, HttpResponse, SHARED_COMPRESSOR, TemplatedApp, WebSocket } from 'uWebSockets.js'
 import { isMainThread, threadId, workerData } from 'worker_threads'
 import { CHANNELS, MESSAGE_TYPES_PER_CHANNEL, OPS } from './consts'
-import { CircularBuffer, getAllowedValuesText, getDidYouMean, minionReadyChannel, serumDataChannel } from './helpers'
+import {
+  CircularBuffer,
+  getAllowedValuesText,
+  getDidYouMean,
+  minionReadyChannel,
+  serumDataChannel,
+  serumMarketsChannel
+} from './helpers'
 import { logger } from './logger'
-import { ACTIVE_MARKETS, ACTIVE_MARKETS_NAMES } from './markets'
 import { MessageEnvelope } from './serum_producer'
-import { ErrorResponse, SerumListMarketItem, SubRequest, SuccessResponse } from './types'
+import { ErrorResponse, SerumListMarketItem, SerumMarket, SubRequest, SuccessResponse } from './types'
 
 const meta = {
   minionId: threadId
@@ -61,8 +67,10 @@ class Minion {
   private readonly _recentTrades: { [symbol: string]: CircularBuffer<string> } = {}
   private readonly _recentTradesSerialized: { [symbol: string]: string | undefined } = {}
   private readonly _quotesSerialized: { [symbol: string]: string } = {}
+  private readonly _marketNames: string[]
 
-  constructor(private readonly _nodeEndpoint: string) {
+  constructor(private readonly _nodeEndpoint: string, private readonly _markets: SerumMarket[]) {
+    this._marketNames = _markets.map((m) => m.name)
     this._server = this._initServer()
   }
 
@@ -136,37 +144,46 @@ class Minion {
 
     if (this._cachedListMarketsResponse === undefined) {
       const markets = await Promise.all(
-        ACTIVE_MARKETS.map(async (market) => {
+        this._markets.map(async (market) => {
           const connection = new Connection(this._nodeEndpoint)
-          const { tickSize, minOrderSize, supportsReferralFees, supportsSrmFeeDiscounts } = await Market.load(
+          const { tickSize, minOrderSize, baseMintAddress, quoteMintAddress, programId } = await Market.load(
             connection,
-            market.address,
+            new PublicKey(market.address),
             undefined,
-            market.programId
+            new PublicKey(market.programId)
           )
 
+          const [baseCurrency, quoteCurrency] = market.name.split('/')
           const serumMarket: SerumListMarketItem = {
             symbol: market.name,
-            address: market.address.toString(),
-            programId: market.programId.toString(),
+            baseCurrency: baseCurrency!,
+            quoteCurrency: quoteCurrency!,
+            version: getLayoutVersion(programId),
+            address: market.address,
+            programId: market.programId,
+            baseMintAddress: baseMintAddress.toBase58(),
+            quoteMintAddress: quoteMintAddress.toBase58(),
             tickSize,
             minOrderSize,
-            deprecated: market.deprecated,
-            supportsReferralFees,
-            supportsSrmFeeDiscounts
+            deprecated: market.deprecated
           }
           return serumMarket
         })
       )
 
       this._cachedListMarketsResponse = JSON.stringify(markets, null, 2)
-      logger.log('info', 'Cached markets info response', meta)
+      serumMarketsChannel.postMessage(this._cachedListMarketsResponse)
     }
 
     if (!res.aborted) {
       res.writeHeader('content-type', 'application/json')
       res.end(this._cachedListMarketsResponse)
     }
+  }
+
+  public initMarketsCache(cachedResponse: string) {
+    this._cachedListMarketsResponse = cachedResponse
+    logger.log('info', 'Cached markets info response', meta)
   }
 
   public async processMessage(message: MessageEnvelope) {
@@ -300,11 +317,11 @@ class Minion {
   }
 
   private _validateMarketName(marketName: string) {
-    if (ACTIVE_MARKETS_NAMES.includes(marketName) === false) {
+    if (this._marketNames.includes(marketName) === false) {
       const error = `Invalid market name provided: '${marketName}'.${getDidYouMean(
         marketName,
-        ACTIVE_MARKETS_NAMES
-      )} ${getAllowedValuesText(ACTIVE_MARKETS_NAMES)}`
+        this._marketNames
+      )} ${getAllowedValuesText(this._marketNames)}`
 
       return {
         isValid: false,
@@ -360,13 +377,13 @@ class Minion {
     }
 
     for (const market of payload.markets) {
-      if (ACTIVE_MARKETS_NAMES.includes(market) === false) {
+      if (this._marketNames.includes(market) === false) {
         return {
           isValid: false,
           error: `Invalid market name provided: '${market}'.${getDidYouMean(
             market,
-            ACTIVE_MARKETS_NAMES
-          )} ${getAllowedValuesText(ACTIVE_MARKETS_NAMES)}`
+            this._marketNames
+          )} ${getAllowedValuesText(this._marketNames)}`
         } as const
       }
     }
@@ -379,13 +396,17 @@ class Minion {
   }
 }
 
-const { port, nodeEndpoint } = workerData as { port: number; nodeEndpoint: string }
+const { port, nodeEndpoint, markets } = workerData as { port: number; nodeEndpoint: string; markets: SerumMarket[] }
 
-const minion = new Minion(nodeEndpoint)
+const minion = new Minion(nodeEndpoint, markets)
 
 minion.start(port).then(() => {
   serumDataChannel.onmessage = (message) => {
     minion.processMessage(message.data)
+  }
+
+  serumMarketsChannel.onmessage = (message) => {
+    minion.initMarketsCache(message.data)
   }
 
   minionReadyChannel.postMessage('ready')
