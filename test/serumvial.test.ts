@@ -1,6 +1,6 @@
 import fetch from 'node-fetch'
 import WebSocket from 'ws'
-import { bootServer, DataMessage, SerumListMarketItem, SubRequest, SuccessResponse } from '../dist'
+import { bootServer, stopServer, DataMessage, SerumListMarketItem, SubRequest, SuccessResponse } from '../dist'
 import { wait } from '../dist/helpers'
 
 const PORT = 8989
@@ -31,6 +31,10 @@ describe('serum-vial', () => {
       nodeEndpoint: 'https://solana-api.projectserum.com'
     })
   }, TIMEOUT)
+
+  afterAll(async () => {
+    await stopServer()
+  })
 
   test(
     'HTTP GET /markets',

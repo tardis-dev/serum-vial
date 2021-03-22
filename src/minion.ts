@@ -1,10 +1,20 @@
 import { Market, getLayoutVersion } from '@project-serum/serum'
 import { Connection, PublicKey } from '@solana/web3.js'
-import { App, SSLApp, HttpRequest, HttpResponse, SHARED_COMPRESSOR, TemplatedApp, WebSocket } from 'uWebSockets.js'
+import {
+  App,
+  SSLApp,
+  HttpRequest,
+  HttpResponse,
+  SHARED_COMPRESSOR,
+  TemplatedApp,
+  WebSocket,
+  us_listen_socket_close
+} from 'uWebSockets.js'
 import { isMainThread, threadId, workerData } from 'worker_threads'
 import { CHANNELS, MESSAGE_TYPES_PER_CHANNEL, OPS } from './consts'
 import {
   CircularBuffer,
+  cleanupChannel,
   getAllowedValuesText,
   getDidYouMean,
   minionReadyChannel,
@@ -68,6 +78,7 @@ class Minion {
   private readonly _recentTradesSerialized: { [symbol: string]: string | undefined } = {}
   private readonly _quotesSerialized: { [symbol: string]: string } = {}
   private readonly _marketNames: string[]
+  private _listenSocket: any | undefined = undefined
 
   constructor(private readonly _nodeEndpoint: string, private readonly _markets: SerumMarket[]) {
     this._marketNames = _markets.map((m) => m.name)
@@ -103,6 +114,7 @@ class Minion {
     return new Promise<void>((resolve, reject) => {
       this._server.listen(port, (socket) => {
         if (socket) {
+          this._listenSocket = socket
           logger.log('info', `Listening on port ${port}`, meta)
           resolve()
         } else {
@@ -112,6 +124,12 @@ class Minion {
         }
       })
     })
+  }
+
+  public async stop() {
+    if (this._listenSocket !== undefined) {
+      us_listen_socket_close(this._listenSocket)
+    }
   }
 
   private _listRecentTrades = async (res: HttpResponse, req: HttpRequest) => {
@@ -422,3 +440,7 @@ minion.start(port).then(() => {
 
   minionReadyChannel.postMessage('ready')
 })
+
+cleanupChannel.onmessage = async () => {
+  await minion.stop()
+}

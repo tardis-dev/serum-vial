@@ -1,7 +1,7 @@
 import os from 'os'
 import path from 'path'
 import { Worker } from 'worker_threads'
-import { minionReadyChannel, serumProducerReadyChannel, wait } from './helpers'
+import { cleanupChannel, minionReadyChannel, serumProducerReadyChannel, wait } from './helpers'
 import { logger } from './logger'
 import { SerumMarket } from './types'
 
@@ -88,6 +88,12 @@ export async function bootServer({
 
     resolve()
   })
+}
+
+export async function stopServer() {
+  cleanupChannel.postMessage('cleanup')
+
+  await wait(10 * 1000)
 }
 
 type BootOptions = {

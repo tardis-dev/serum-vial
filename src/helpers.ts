@@ -90,6 +90,7 @@ export const minionReadyChannel = new BroadcastChannel('MinionReady') as Broadca
 export const serumProducerReadyChannel = new BroadcastChannel('SerumProducerReady') as BroadcastChannel
 export const serumDataChannel = new BroadcastChannel('SerumData') as BroadcastChannel
 export const serumMarketsChannel = new BroadcastChannel('SerumMarkets') as BroadcastChannel
+export const cleanupChannel = new BroadcastChannel('Cleanup') as BroadcastChannel
 
 export async function executeAndRetry<T>(
   operation: (attempt: number) => Promise<T>,
