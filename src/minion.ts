@@ -133,6 +133,9 @@ class Minion {
     if (serializedRecentTrades === undefined) {
       const recentTrades =
         this._recentTrades[marketName] !== undefined ? [...this._recentTrades[marketName]!.items()] : []
+
+      recentTrades.reverse()
+
       serializedRecentTrades = `[${recentTrades.join(',')}]`
     }
 
