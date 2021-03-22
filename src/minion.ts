@@ -1,6 +1,6 @@
 import { Market, getLayoutVersion } from '@project-serum/serum'
 import { Connection, PublicKey } from '@solana/web3.js'
-import { App, HttpRequest, HttpResponse, SHARED_COMPRESSOR, TemplatedApp, WebSocket } from 'uWebSockets.js'
+import { App, SSLApp, HttpRequest, HttpResponse, SHARED_COMPRESSOR, TemplatedApp, WebSocket } from 'uWebSockets.js'
 import { isMainThread, threadId, workerData } from 'worker_threads'
 import { CHANNELS, MESSAGE_TYPES_PER_CHANNEL, OPS } from './consts'
 import {
@@ -76,7 +76,15 @@ class Minion {
 
   private _initServer() {
     const apiPrefix = `/v${this._apiVersion}`
-    return App()
+    const useSSL = process.env.KEY_FILE_NAME !== undefined
+    const WsApp = useSSL ? SSLApp : App
+    const options = useSSL
+      ? {
+          key_file_name: process.env.KEY_FILE_NAME,
+          cert_file_name: process.env.CERT_FILE_NAME
+        }
+      : {}
+    return WsApp(options)
       .ws(`${apiPrefix}/ws`, {
         compression: SHARED_COMPRESSOR,
         maxPayloadLength: 256 * 1024,
