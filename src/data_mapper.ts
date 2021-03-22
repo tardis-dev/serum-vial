@@ -229,7 +229,7 @@ export class DataMapper {
 
         // detect l2 trades based on fills
         if (message.type === 'fill' && message.maker === false) {
-          const tradeId = `${message.orderId}|${message.size}|${timestamp}`
+          const tradeId = `${message.orderId}|${message.size}|${new Date(timestamp).valueOf()}`
 
           const tradeMessage: Trade = {
             type: 'trade',
