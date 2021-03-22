@@ -198,6 +198,10 @@ class Minion {
       this._quotesSerialized[message.symbol] = message.payload
     }
 
+    if (message.type === 'recent_trades') {
+      this._recentTradesSerialized[message.symbol] = message.payload
+    }
+
     if (message.publish) {
       this._server.publish(topic, message.payload)
     }
