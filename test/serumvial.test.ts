@@ -47,6 +47,43 @@ describe('serum-vial', () => {
   )
 
   test(
+    'WS trades data stream',
+    async () => {
+      const wsClient = new SimpleWebsocketClient(WS_ENDPOINT)
+      const markets = await fetchMarkets()
+
+      const subscribeRequest: SubRequest = {
+        op: 'subscribe',
+        channel: 'trades',
+        markets: markets.map((m) => m.symbol)
+      }
+
+      await wsClient.send(subscribeRequest)
+      let messagesCount = 0
+
+      for await (const message of wsClient.stream()) {
+        const isFirstMessage = messagesCount === 0
+        if (isFirstMessage) {
+          expect(message.type).toEqual('subscribed')
+        }
+
+        const firstDataMessage = messagesCount === 1
+        if (firstDataMessage) {
+          expect(message.type).toEqual('recent_trades')
+        }
+
+        messagesCount++
+        if (messagesCount == 2) {
+          break
+        }
+      }
+
+      expect(messagesCount).toBe(2)
+    },
+    TIMEOUT
+  )
+
+  test(
     'WS level1 data stream',
     async () => {
       const wsClient = new SimpleWebsocketClient(WS_ENDPOINT)
@@ -65,6 +102,16 @@ describe('serum-vial', () => {
         const isFirstMessage = l1MessagesCount === 0
         if (isFirstMessage) {
           expect(message.type).toEqual('subscribed')
+        }
+
+        const firstDataMessage = l1MessagesCount === 1
+        if (firstDataMessage) {
+          expect(message.type).toEqual('recent_trades')
+        }
+
+        const secondDataMessage = l1MessagesCount === 2
+        if (secondDataMessage) {
+          expect(message.type).toEqual('quote')
         }
 
         l1MessagesCount++
@@ -98,10 +145,17 @@ describe('serum-vial', () => {
         if (isFirstMessage) {
           expect(message.type).toEqual('subscribed')
         }
+
         const firstDataMessage = l2MessagesCount === 1
         if (firstDataMessage) {
           expect(message.type).toEqual('l2snapshot')
         }
+
+        const secondDataMessage = l2MessagesCount === 2
+        if (secondDataMessage) {
+          expect(message.type).toEqual('recent_trades')
+        }
+
         l2MessagesCount++
         if (l2MessagesCount == 10) {
           break
@@ -133,10 +187,12 @@ describe('serum-vial', () => {
         if (isFirstMessage) {
           expect(message.type).toEqual('subscribed')
         }
+
         const firstDataMessage = l3MessagesCount === 1
         if (firstDataMessage) {
           expect(message.type).toEqual('l3snapshot')
         }
+
         l3MessagesCount++
         if (l3MessagesCount == 20) {
           break

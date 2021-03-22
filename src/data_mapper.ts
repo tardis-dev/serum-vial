@@ -2,6 +2,7 @@ import { EVENT_QUEUE_LAYOUT, Market, Orderbook, getLayoutVersion } from '@projec
 import { Event } from '@project-serum/serum/lib/queue'
 import { PublicKey } from '@solana/web3.js'
 import BN from 'bn.js'
+import { CircularBuffer } from './helpers'
 import { logger } from './logger'
 import { AccountsNotificationPayload } from './rpc_client'
 import { MessageEnvelope } from './serum_producer'
@@ -17,6 +18,7 @@ import {
   OrderItem,
   PriceLevel,
   Quote,
+  RecentTrades,
   Trade
 } from './types'
 
@@ -51,6 +53,8 @@ export class DataMapper {
 
   private readonly _version: number
   private _zeroWithPrecision: string
+
+  private readonly _recentTrades: CircularBuffer<Trade> = new CircularBuffer(100)
 
   constructor(
     private readonly _options: {
@@ -244,6 +248,17 @@ export class DataMapper {
           }
 
           yield this._putInEnvelope(tradeMessage, true)
+
+          this._recentTrades.append(tradeMessage)
+
+          const recentTradesMessage: RecentTrades = {
+            type: 'recent_trades',
+            symbol: this._options.symbol,
+            timestamp,
+            trades: [...this._recentTrades.items()]
+          }
+
+          yield this._putInEnvelope(recentTradesMessage, false)
         }
       }
     }
@@ -525,7 +540,7 @@ export class DataMapper {
     return [price, size]
   }
 
-  private _putInEnvelope(message: DataMessage, publish: boolean) {
+  private _putInEnvelope(message: DataMessage | RecentTrades, publish: boolean) {
     const envelope: MessageEnvelope = {
       type: message.type,
       symbol: message.symbol,

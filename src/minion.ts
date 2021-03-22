@@ -3,7 +3,6 @@ import { Connection, PublicKey } from '@solana/web3.js'
 import {
   App,
   SSLApp,
-  HttpRequest,
   HttpResponse,
   SHARED_COMPRESSOR,
   TemplatedApp,
@@ -13,7 +12,6 @@ import {
 import { isMainThread, threadId, workerData } from 'worker_threads'
 import { CHANNELS, MESSAGE_TYPES_PER_CHANNEL, OPS } from './consts'
 import {
-  CircularBuffer,
   cleanupChannel,
   getAllowedValuesText,
   getDidYouMean,
@@ -23,7 +21,7 @@ import {
 } from './helpers'
 import { logger } from './logger'
 import { MessageEnvelope } from './serum_producer'
-import { ErrorResponse, SerumListMarketItem, SerumMarket, SubRequest, SuccessResponse } from './types'
+import { ErrorResponse, RecentTrades, SerumListMarketItem, SerumMarket, SubRequest, SuccessResponse } from './types'
 
 const meta = {
   minionId: threadId
@@ -74,8 +72,7 @@ class Minion {
 
   private readonly _l2SnapshotsSerialized: { [symbol: string]: string } = {}
   private readonly _l3SnapshotsSerialized: { [symbol: string]: string } = {}
-  private readonly _recentTrades: { [symbol: string]: CircularBuffer<string> } = {}
-  private readonly _recentTradesSerialized: { [symbol: string]: string | undefined } = {}
+  private readonly _recentTradesSerialized: { [symbol: string]: string } = {}
   private readonly _quotesSerialized: { [symbol: string]: string } = {}
   private readonly _marketNames: string[]
   private _listenSocket: any | undefined = undefined
@@ -107,7 +104,6 @@ class Minion {
       })
 
       .get(`${apiPrefix}/markets`, this._listMarkets)
-      .get(`${apiPrefix}/recent-trades/:market`, this._listRecentTrades)
   }
 
   public async start(port: number) {
@@ -129,37 +125,6 @@ class Minion {
   public async stop() {
     if (this._listenSocket !== undefined) {
       us_listen_socket_close(this._listenSocket)
-    }
-  }
-
-  private _listRecentTrades = async (res: HttpResponse, req: HttpRequest) => {
-    res.onAborted(() => {
-      res.aborted = true
-    })
-
-    const marketName = decodeURIComponent(req.getParameter(0))
-
-    const { isValid, error } = this._validateMarketName(marketName)
-    if (isValid === false) {
-      res.writeHeader('content-type', 'application/json')
-      res.writeStatus('400')
-      res.end(JSON.stringify({ error }))
-      return
-    }
-
-    let serializedRecentTrades = this._recentTradesSerialized[marketName]
-    if (serializedRecentTrades === undefined) {
-      const recentTrades =
-        this._recentTrades[marketName] !== undefined ? [...this._recentTrades[marketName]!.items()] : []
-
-      recentTrades.reverse()
-
-      serializedRecentTrades = `[${recentTrades.join(',')}]`
-    }
-
-    if (!res.aborted) {
-      res.writeHeader('content-type', 'application/json')
-      res.end(serializedRecentTrades)
     }
   }
 
@@ -233,15 +198,6 @@ class Minion {
       this._quotesSerialized[message.symbol] = message.payload
     }
 
-    if (message.type === 'trade') {
-      if (this._recentTrades[message.symbol] === undefined) {
-        this._recentTrades[message.symbol] = new CircularBuffer(100)
-      }
-
-      this._recentTrades[message.symbol]!.append(message.payload)
-      this._recentTradesSerialized[message.symbol] = undefined
-    }
-
     if (message.publish) {
       this._server.publish(topic, message.payload)
     }
@@ -303,6 +259,22 @@ class Minion {
           if (request.op === 'subscribe') {
             ws.subscribe(topic)
 
+            if (type === 'recent_trades') {
+              const recentTrades = this._recentTradesSerialized[market]
+              if (recentTrades !== undefined) {
+                ws.send(recentTrades)
+              } else {
+                const emptyRecentTradesMessage: RecentTrades = {
+                  type: 'recent_trades',
+                  symbol: market,
+                  timestamp: new Date().toISOString(),
+                  trades: []
+                }
+
+                ws.send(JSON.stringify(emptyRecentTradesMessage))
+              }
+            }
+
             if (type === 'quote') {
               const quote = this._quotesSerialized[market]
 
@@ -342,24 +314,6 @@ class Minion {
       try {
         ws.end(1011, message)
       } catch {}
-    }
-  }
-
-  private _validateMarketName(marketName: string) {
-    if (this._marketNames.includes(marketName) === false) {
-      const error = `Invalid market name provided: '${marketName}'.${getDidYouMean(
-        marketName,
-        this._marketNames
-      )} ${getAllowedValuesText(this._marketNames)}`
-
-      return {
-        isValid: false,
-        error
-      }
-    }
-
-    return {
-      isValid: true
     }
   }
 

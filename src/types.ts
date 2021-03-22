@@ -17,6 +17,12 @@ export interface Message {
   readonly timestamp: string
 }
 
+export interface RecentTrades extends Message {
+  readonly type: 'recent_trades'
+  readonly symbol: string
+  readonly trades: Trade[]
+}
+
 export interface DataMessage extends Message {
   readonly symbol: string
   readonly version: number

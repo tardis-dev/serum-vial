@@ -70,7 +70,7 @@ export class CircularBuffer<T> {
   *items() {
     for (let i = 0; i < this._buffer.length; i++) {
       const index = (this._index + i) % this._buffer.length
-      yield this._buffer[index]
+      yield this._buffer[index]!
     }
   }
 
