@@ -1,0 +1,19 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`serum-vial HTTP GET /markets 1`] = `
+Array [
+  Object {
+    "address": "A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw",
+    "baseCurrency": "BTC",
+    "baseMintAddress": "9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E",
+    "deprecated": false,
+    "minOrderSize": 0.0001,
+    "programId": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+    "quoteCurrency": "USDC",
+    "quoteMintAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "symbol": "BTC/USDC",
+    "tickSize": 0.1,
+    "version": 3,
+  },
+]
+`;

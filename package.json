@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsc",
     "precommit": "lint-staged",
-    "test": "jest --runInBand --forceExit",
+    "test": "npm run build && jest --runInBand --forceExit",
     "prepare": "npm run build",
     "start:debug": "npm run build && node ./bin/serum-vial.js --log-level=debug",
     "format": "prettier --write **/*.{ts,json,md,yaml}",
