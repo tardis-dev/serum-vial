@@ -1,9 +1,9 @@
 <img src="https://raw.githubusercontent.com/tardis-dev/serum-vial/master/logo.svg">
 
-# serum-vial: real-time WebSocket market data API for Serum
+# serum-vial: real-time WS market data API for Serum
 
-[![Version](https://img.shields.io/npm/v/serum-vial.svg)](https://www.npmjs.org/package/serum-vial)
-[![Docker version](https://img.shields.io/docker/v/tardisdev/serum-vial/latest?label=Docker)](https://hub.docker.com/r/tardisdev/serum-vial)
+[![Version](https://img.shields.io/npm/v/serum-vial.svg?color=05aac5)](https://www.npmjs.org/package/serum-vial)
+[![Docker version](https://img.shields.io/docker/v/tardisdev/serum-vial/latest?label=Docker&color=05aac5)](https://hub.docker.com/r/tardisdev/serum-vial)
 
 <br/>
 
@@ -22,6 +22,40 @@ We all know that Serum DEX is awesome, but since it's a new ecosystem, some tool
   - **real-time L3 data** - receive updates on individual order level: opens, changes, fills and cancellations for each order Serum DEX handles
 
 - **decreased load and bandwidth consumption for solana RPC nodes hosts** - by providing real-time market data API via serum-vial server instead of RPC node, hosts can decrease substantially both CPU load and bandwidth requirements as only serum-vial will be direct consumer of RPC API when it comes to market data accounts changes and will efficiently normalize and broadcast small JSON messages to all connected clients
+
+<br/>
+
+## Getting started
+
+You can need to have serum-vial server running locally, or as in example below you can try it out with hosted demo server. You can run this code snippet in the browser Dev Tools directly or in Node.js (requires installation of `ws` lib, [see](https://runkit.com/thad/serum-vial-node-js-sample)).
+
+```js
+const ws = new WebSocket('wss://serum-vial.tardis.dev/v1/ws')
+
+ws.onmessage = (message) => {
+  console.log(JSON.parse(message.data))
+}
+
+ws.onopen = () => {
+  // subscribe both to L2 and L3 real-time channels
+  const subscribeL2 = {
+    op: 'subscribe',
+    channel: 'level2',
+    markets: ['BTC/USDC']
+  }
+
+  const subscribeL3 = {
+    op: 'subscribe',
+    channel: 'level3',
+    markets: ['BTC/USDC']
+  }
+
+  ws.send(JSON.stringify(subscribeL2))
+  ws.send(JSON.stringify(subscribeL3))
+}
+```
+
+[![Try this code live on RunKit](https://img.shields.io/badge/-Try%20this%20code%20live%20on%20RunKit-c?color=05aac5)](https://runkit.com/thad/serum-vial-node-js-sample)
 
 <br/>
 
