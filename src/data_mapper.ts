@@ -28,7 +28,7 @@ export class DataMapper {
   private _asksAccountOrders: OrderItem[] | undefined = undefined
 
   private _bidsAccountSlabItems: SlabItem[] | undefined = undefined
-  private _asksAccounSlabItems: SlabItem[] | undefined = undefined
+  private _asksAccountSlabItems: SlabItem[] | undefined = undefined
 
   // _local* are used only for verification purposes
   private _localBidsOrders: OrderItem[] | undefined = undefined
@@ -109,7 +109,7 @@ export class DataMapper {
         }
       }
 
-      this._asksAccounSlabItems = newAsksSlabItems
+      this._asksAccountSlabItems = newAsksSlabItems
       this._asksAccountOrders = newAsksOrders
     }
 
@@ -169,7 +169,7 @@ export class DataMapper {
 
     if (this._currentL2Snapshot === undefined) {
       this._currentL2Snapshot = {
-        asks: this._mapToL2Snapshot(this._asksAccounSlabItems!),
+        asks: this._mapToL2Snapshot(this._asksAccountSlabItems!),
         bids: this._mapToL2Snapshot(this._bidsAccountSlabItems!)
       }
 
@@ -207,7 +207,7 @@ export class DataMapper {
     const newL2Snapshot = {
       asks:
         accountsData.asks !== undefined
-          ? this._mapToL2Snapshot(this._asksAccounSlabItems!)
+          ? this._mapToL2Snapshot(this._asksAccountSlabItems!)
           : this._currentL2Snapshot.asks,
 
       bids:
@@ -490,7 +490,7 @@ export class DataMapper {
         if (levelSizeChanged) {
           l2Diff.push(newLevel)
         }
-        // remove from currrent levels map so we know that such level exists in new levels
+        // remove from current levels map so we know that such level exists in new levels
         currentLevelsMap.delete(newLevel[0])
       } else {
         // completely new price level

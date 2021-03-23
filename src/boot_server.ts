@@ -16,13 +16,13 @@ export async function bootServer({
   // multi core support is linux only feature which allows multiple threads to bind to the same port
   // see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/
   const MINIONS_COUNT = os.platform() === 'linux' ? minionsCount : 1
-  let readyMonionsCount = 0
+  let readyMinionsCount = 0
 
   logger.log(
     'info',
     MINIONS_COUNT === 1 ? 'Starting single minion worker...' : `Starting ${MINIONS_COUNT} minion workers...`
   )
-  minionReadyChannel.onmessage = () => readyMonionsCount++
+  minionReadyChannel.onmessage = () => readyMinionsCount++
 
   // start minions workers and wait until all are ready
 
@@ -32,7 +32,7 @@ export async function bootServer({
     })
 
     minionWorker.on('error', (err) => {
-      logger.log('error', `Minion worker ${minionWorker.threadId} error occured: ${err.message} ${err.stack}`)
+      logger.log('error', `Minion worker ${minionWorker.threadId} error occurred: ${err.message} ${err.stack}`)
       throw err
     })
     minionWorker.on('exit', (code) => {
@@ -42,7 +42,7 @@ export async function bootServer({
 
   await new Promise<void>(async (resolve) => {
     while (true) {
-      if (readyMonionsCount === MINIONS_COUNT) {
+      if (readyMinionsCount === MINIONS_COUNT) {
         break
       }
       await wait(100)
@@ -65,7 +65,7 @@ export async function bootServer({
     serumProducerWorker.on('error', (err) => {
       logger.log(
         'error',
-        `Serum producer worker ${serumProducerWorker.threadId} error occured: ${err.message} ${err.stack}`
+        `Serum producer worker ${serumProducerWorker.threadId} error occurred: ${err.message} ${err.stack}`
       )
       throw err
     })

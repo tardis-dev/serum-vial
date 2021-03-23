@@ -124,7 +124,7 @@ export class RPCClient {
   }
 }
 
-// this helper class handles RPC subscriptions to seprate DEX accounts (bids, asks & event queue)
+// this helper class handles RPC subscriptions to separate DEX accounts (bids, asks & event queue)
 // and provide notification in synchronized fashion, meaning  we get at most one notification per slot
 // with accounts data that changed in that slot
 //
@@ -230,7 +230,7 @@ class AccountsChangeNotifications {
       this._sendPeriodicPings(ws)
       this._monitorConnectionIfStale(ws)
 
-      logger.log('info', 'Estabilished new RPC WebSocket connection...', { market: this._options.marketName })
+      logger.log('info', 'Established new RPC WebSocket connection...', { market: this._options.marketName })
     }
 
     ws.onmessage = (event) => {
@@ -291,7 +291,7 @@ class AccountsChangeNotifications {
       }
 
       if (message.method === 'slotNotification') {
-        // ignore slot notficiations which are only used as a heartbeat message
+        // ignore slot notifications which are only used as a heartbeat message
         return
       }
 
@@ -587,7 +587,7 @@ class AccountsChangeNotifications {
     if (this._state === 'PRISTINE') {
       if (this._currentSlot === slot) {
         // in case we fetched accounts data via REST API and WS account notification is published for such snapshot already
-        // let's skip it as we alrady processed it's data from REST accounts snapshot
+        // let's skip it as we already processed it's data from REST accounts snapshot
         logger.log('warn', 'Ignoring WS account notification', { market: this._options.marketName })
         return
       } else {
