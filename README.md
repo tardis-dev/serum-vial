@@ -25,13 +25,22 @@ We all know that Serum DEX is awesome, but since it's a new ecosystem, some tool
 
 <br/>
 
+## What about placing/cancelling orders endpoints?
+
+Serum-vial provides real-time market data only and does not include endpoints for placing/canceling or tracking own orders as that requires handling private keys.
+Please see [serum-rest-server](https://github.com/project-serum/serum-rest-server) or [@project-serum/serum](https://github.com/project-serum/serum-ts/tree/master/packages/serum) as good alternatives.
+
+<br/>
+
 ## Getting started
 
-You'll need to have serum-vial server running locally, or as in example below you try it out with hosted demo server.
 Run following code snippet in the browser Dev Tools directly or in Node.js (requires installation of `ws` lib, [see](https://runkit.com/thad/serum-vial-node-js-sample)).
 
 ```js
+// connect to hosted demo server
 const ws = new WebSocket('wss://serum-vial.tardis.dev/v1/ws')
+// if connecting to serum-vial server running locally
+// const ws = new WebSocket('ws://localhost:8000/v1/ws')
 
 ws.onmessage = (message) => {
   console.log(JSON.parse(message.data))
@@ -57,6 +66,16 @@ ws.onopen = () => {
 ```
 
 [![Try this code live on RunKit](https://img.shields.io/badge/-Try%20this%20code%20live%20on%20RunKit-c?color=05aac5)](https://runkit.com/thad/serum-vial-node-js-sample)
+
+<br/>
+
+## Demo
+
+Demo of Serum DEX UI backed by serum-vial WebSocket API for trade and order book data is available at [serum-dex.tardis.dev](https://serum-dex.tardis.dev/).
+
+Since by default serum-vial uses [`confirmed` commitment level](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment) for getting accounts notification from RPC node, it may sometimes feel bit lagging vs default DEX UI which uses [`recent/processed` commitment](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment).
+
+[![See demo](https://img.shields.io/badge/-See%20Demo-c?color=05aac5)](https://serum-dex.tardis.dev/)
 
 <br/>
 
