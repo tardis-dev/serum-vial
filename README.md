@@ -28,7 +28,8 @@ We all know that Serum DEX is awesome, but since it's a new ecosystem, some tool
 ## What about placing/cancelling orders endpoints?
 
 Serum-vial provides real-time market data only and does not include endpoints for placing/canceling or tracking own orders as that requires handling private keys which is currently out of scope of this project.
-Please see [serum-rest-server](https://github.com/project-serum/serum-rest-server) or [@project-serum/serum](https://github.com/project-serum/serum-ts/tree/master/packages/serum) as a good alternatives.
+
+See [serum-rest-server](https://github.com/project-serum/serum-rest-server) or [@project-serum/serum](https://github.com/project-serum/serum-ts/tree/master/packages/serum) as a good alternatives.
 
 <br/>
 
@@ -97,6 +98,13 @@ If you'd like to switch to different Solana RPC node endpoint, change port or ru
 npx serum-vial --endpoint https://solana-api.projectserum.com --log-level debug --port 8080
 ```
 
+Alternatively you can install serum-vial globally.
+
+```sh
+npm install -g serum-vial
+serum-vial
+```
+
 #### CLI options
 
 | &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | default                                                                                                                                                             | description                                                                                                    |
@@ -113,37 +121,6 @@ Run `npx serum-vial --help` to see all available startup options.
 <br/>
 <br/>
 
-## npm <sub>(requires Node.js >= 15 and git installed on host machine)</sub>
-
-Installs `serum-vial` globally and runs it on port `8000`.
-
-```sh
-npm install -g serum-vial
-serum-vial
-```
-
-If you'd like to switch to different Solana RPC node endpoint, change port or run with debug logs enabled, just add one of the available CLI options.
-
-```sh
-serum-vial --endpoint https://solana-api.projectserum.com --log-level debug --port 8080
-```
-
-#### CLI options
-
-| &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | default                                                                                                                                                             | description                                                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `port`                                                                                                                                                                                   | 8000                                                                                                                                                                | Port to bind server on                                                                                         |
-| `endpoint`                                                                                                                                                                               | https://solana-api.projectserum.com                                                                                                                                 | Solana RPC node endpoint that serum-vial uses as a data source                                                 |
-| `log-level`                                                                                                                                                                              | info                                                                                                                                                                | Log level, available options: debug, info, warn and error                                                      |
-| `minions-count`                                                                                                                                                                          | 1                                                                                                                                                                   | Minions worker threads count that are responsible for broadcasting normalized WS messages to connected clients |
-| `commitment`                                                                                                                                                                             | confirmed                                                                                                                                                           | Solana commitment level to use when communicating with RPC node, available options: confirmed and processed    |
-| `markets-json`                                                                                                                                                                           | `@project-serum/serum` [markets.json](https://github.com/project-serum/serum-ts/blob/master/packages/serum/src/markets.json) file, but only non depreciated markets | path to custom market.json definition file if one wants to run serum-vial for custom markets                   |
-
-<br/>
-  Run `serum-vial --help` to see all available startup options.
-  <br/>
-  <br/>
-
 ## Docker
 
 Pulls and runs latest version of [`tardisdev/serum-vial` Docker Image](https://hub.docker.com/r/tardisdev/serum-vial) on port `8000`.
@@ -155,7 +132,7 @@ docker run -p 8000:8000 -d tardisdev/serum-vial:latest
 If you'd like to switch to different Solana RPC node endpoint, change port or run with debug logs enabled, just specify those via one of the available env variables.
 
 ```sh
-docker run -p 8000:8000 -e "SV_ENDPOINT=https://solana-api.projectserum.com" -e "SV_LOG_LEVEL=debug" -d tardisdev/serum-vial:latest
+docker run -p 8000:8000 -e "SV_LOG_LEVEL=debug" -d tardisdev/serum-vial:latest
 ```
 
 #### ENV Variables
@@ -178,45 +155,165 @@ Serum-vial supports [SSL/TLS](https://en.wikipedia.org/wiki/Transport_Layer_Secu
 
 <br/>
 
-## Architecture
+## WebSocket API
 
-![architecture diagram](https://user-images.githubusercontent.com/51779538/111766810-3f20e080-88a6-11eb-8c4c-54787332cc84.png)
+WebSocket API provides real-time market data feeds of Serum DEX and uses a bidirectional protocol which encodes all messages as JSON objects.
 
-- server runs with multiple\* `Minions` worker threads and multiple `Serum Producers`
-- `Minions` are responsible for WebSockets subscriptions management, constructing L2 & L1 messages out of L3 messages published by `Serum Producer` and broadcasting all those messages to all subscribed clients
-- `Serum Producer` is responsible for connecting to Serum Node RPC WS API and subscribing all relevant accounts changes (event & request queue, bids & asks) for all supported markets as well as producing L3 market data messages that are then passed to minions and published as WebSocket messages to all subscribed clients
-- by default all non depreciated markets, can be changed by providing market.json
+Every message has a `type` field that is determining it's data type so it can be handled appropriately.
 
-\* multi core support via [`worker_threads`](https://nodejs.org/api/worker_threads.html) for `Minions` is linux only feature which allows multiple threads to bind to the same port, see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/ - for other OSes there's only one worker thread running
+Each WebSocket client is required to actively send native WebSocket [pings](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#pings_and_pongs_the_heartbeat_of_websockets) to the server with interval less than 30 seconds, otherwise connection may be dropped due to inactivity.
+
+All messages timestamps are returned in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format with milliseconds, for example: `"2021-03-23T17:03:03.994Z"`.
+
+### Endpoint URL
+
+#### `ws://localhost:8000/v1/ws`
+
+(assuming serum-vial runs locally on default port without SSL enabled)
+
 <br/>
-<br/>
 
-## WebSocket `/ws` endpoint
+### Subscribing to data feeds
 
-Allows subscribing to Serum DEX real-market data streams.
+To begin receiving real-time market data feed messages, you must first send a subscribe message to the server indicating which channels and markets to receive.
+
+If you want to unsubscribe from channel and markets, send an unsubscribe message. The structure is equivalent to subscribe messages except `op` field which should be set to `"op": "unsubscribe"`.
 
 ```js
 const ws = new WebSocket('ws://localhost:8000/v1/ws')
 
-ws.onmessage = (message) => {
-  console.log(message)
-}
-
 ws.onopen = () => {
-  const subscribePayload = {
+  const subscribeL2 = {
     op: 'subscribe',
-    channel: 'level2', // or level1, level3, trades
+    channel: 'level2',
     markets: ['BTC/USDC']
   }
 
-  ws.send(JSON.stringify(subscribePayload))
+  ws.send(JSON.stringify(subscribeL2))
+}
+```
+
+<br/>
+
+#### Subscribe/unsubscribe message format
+
+```ts
+{
+  "op": "subscribe" | "unsubscribe",
+  "channel": "level3" | "level2" | "level1" | "trades",
+  "markets": string[]
+}
+```
+
+<br/>
+
+##### Sample `subscribe` message
+
+```json
+{
+  "op": "subscribe",
+  "channel": "level2",
+  "markets": ["BTC/USDC"]
+}
+```
+
+<br/>
+
+#### Subscription confirmation message format
+
+Once a subscribe (or unsubscribe) message is received by the server, it will respond with a `subscribed` (or `unsubscribed`) confirmation message or `error` if received message was invalid.
+
+```ts
+{
+"type": "subscribed" | "unsubscribed",
+"channel": "level3" | "level2" | "level1" | "trades",
+"markets": string[],
+"timestamp": string
+}
+```
+
+<br/>
+
+##### Sample `subscribed` confirmation message
+
+```json
+{
+  "type": "subscribed",
+  "channel": "level2",
+  "markets": ["BTC/USDC"],
+  "timestamp": "2021-03-23T17:06:30.010Z"
+}
+```
+
+<br/>
+
+#### Error message format
+
+Error message is returned for invalid subscribe/unsubscribe messages - no existing market, invalid channel name etc.
+
+```ts
+{
+  "type": "error",
+  "message": "string,
+  "timestamp": "string
+}
+```
+
+<br/>
+
+##### Sample `error` message
+
+```json
+{
+  "type": "error",
+  "message": "Invalid channel provided: 'levels1'.",
+  "timestamp": "2021-03-23T17:13:31.010Z"
 }
 ```
 
 <br/>
 <br/>
 
-## HTTP endpoints
+### Available channels & corresponding message types
+
+Subscribing to channel results in providing messages with various types
+
+- `trades`
+
+  - `recent_trades`
+  - `trade`
+
+- `level1`
+
+  - `recent_trades`
+  - `trade`
+  - `quote`
+
+- `level2`
+
+  - `l2snapshot`
+  - `l2update`
+  - `recent_trades`
+  - `trade`
+
+- `level3`
+
+  - `l3snapshot`
+  - `open`
+  - `fill`
+  - `change`
+  - `done`
+
+<br/>
+<br/>
+
+### Available markets
+
+<br/>
+<br/>
+
+### Data messages
+
 
 ### `/markets`
 
