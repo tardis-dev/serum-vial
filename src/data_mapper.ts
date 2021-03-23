@@ -149,7 +149,7 @@ export class DataMapper {
     if (shouldInitialize || snapshotHasChanged) {
       const l3Snapshot: L3Snapshot = {
         type: 'l3snapshot',
-        symbol: this._options.symbol,
+        market: this._options.symbol,
         timestamp,
         slot,
         version: this._version,
@@ -175,7 +175,7 @@ export class DataMapper {
 
       const l2SnapshotMessage: L2 = {
         type: 'l2snapshot',
-        symbol: this._options.symbol,
+        market: this._options.symbol,
         timestamp,
         slot,
         version: this._version,
@@ -190,7 +190,7 @@ export class DataMapper {
 
       const quoteMessage: Quote = {
         type: 'quote',
-        symbol: this._options.symbol,
+        market: this._options.symbol,
         timestamp,
         slot,
         version: this._version,
@@ -237,7 +237,7 @@ export class DataMapper {
 
           const tradeMessage: Trade = {
             type: 'trade',
-            symbol: this._options.symbol,
+            market: this._options.symbol,
             timestamp,
             slot,
             version: this._version,
@@ -253,7 +253,7 @@ export class DataMapper {
 
           const recentTradesMessage: RecentTrades = {
             type: 'recent_trades',
-            symbol: this._options.symbol,
+            market: this._options.symbol,
             timestamp,
             trades: [...this._recentTrades.items()]
           }
@@ -270,7 +270,7 @@ export class DataMapper {
 
       const l2Snapshot: L2 = {
         type: 'l2snapshot',
-        symbol: this._options.symbol,
+        market: this._options.symbol,
         timestamp,
         slot,
         version: this._version,
@@ -279,7 +279,7 @@ export class DataMapper {
       }
       const l2UpdateMessage: L2 = {
         type: 'l2update',
-        symbol: this._options.symbol,
+        market: this._options.symbol,
         timestamp,
         slot,
         version: this._version,
@@ -301,7 +301,7 @@ export class DataMapper {
 
         const quoteMessage: Quote = {
           type: 'quote',
-          symbol: this._options.symbol,
+          market: this._options.symbol,
           timestamp,
           slot,
           version: this._version,
@@ -543,7 +543,7 @@ export class DataMapper {
   private _putInEnvelope(message: DataMessage | RecentTrades, publish: boolean) {
     const envelope: MessageEnvelope = {
       type: message.type,
-      symbol: message.symbol,
+      market: message.market,
       publish,
       payload: JSON.stringify(message),
       timestamp: message.timestamp
@@ -573,7 +573,7 @@ export class DataMapper {
     if (event.eventFlags.fill) {
       const fillMessage: Fill = {
         type: 'fill',
-        symbol: this._options.symbol,
+        market: this._options.symbol,
         timestamp,
         slot,
         version: this._version,
@@ -596,7 +596,7 @@ export class DataMapper {
 
       const doneMessage: Done = {
         type: 'done',
-        symbol: this._options.symbol,
+        market: this._options.symbol,
         timestamp,
         slot,
         version: this._version,
@@ -677,7 +677,7 @@ export class DataMapper {
   ): Open | Change {
     return {
       type,
-      symbol: this._options.symbol,
+      market: this._options.symbol,
       timestamp,
       slot,
       version: this._version,

@@ -19,12 +19,12 @@ export interface Message {
 
 export interface RecentTrades extends Message {
   readonly type: 'recent_trades'
-  readonly symbol: string
+  readonly market: string
   readonly trades: Trade[]
 }
 
 export interface DataMessage extends Message {
-  readonly symbol: string
+  readonly market: string
   readonly version: number
   readonly slot: number
 }
@@ -121,7 +121,7 @@ export interface L3Snapshot extends DataMessage {
 export type L3DataMessage = Open | Fill | Done | L3Snapshot | Change
 
 export type SerumListMarketItem = {
-  symbol: string
+  name: string
   address: string
   baseCurrency: string
   quoteCurrency: string

@@ -55,7 +55,7 @@ describe('serum-vial', () => {
       const subscribeRequest: SubRequest = {
         op: 'subscribe',
         channel: 'trades',
-        markets: markets.map((m) => m.symbol)
+        markets: markets.map((m) => m.name)
       }
 
       await wsClient.send(subscribeRequest)
@@ -92,7 +92,7 @@ describe('serum-vial', () => {
       const subscribeRequest: SubRequest = {
         op: 'subscribe',
         channel: 'level1',
-        markets: markets.map((m) => m.symbol)
+        markets: markets.map((m) => m.name)
       }
 
       await wsClient.send(subscribeRequest)
@@ -134,7 +134,7 @@ describe('serum-vial', () => {
       const subscribeRequest: SubRequest = {
         op: 'subscribe',
         channel: 'level2',
-        markets: markets.map((m) => m.symbol)
+        markets: markets.map((m) => m.name)
       }
 
       await wsClient.send(subscribeRequest)
@@ -176,7 +176,7 @@ describe('serum-vial', () => {
       const subscribeRequest: SubRequest = {
         op: 'subscribe',
         channel: 'level3',
-        markets: markets.map((m) => m.symbol)
+        markets: markets.map((m) => m.name)
       }
 
       await wsClient.send(subscribeRequest)

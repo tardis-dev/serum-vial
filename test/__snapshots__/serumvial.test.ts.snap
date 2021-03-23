@@ -11,7 +11,7 @@ Array [
     "programId": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
     "quoteCurrency": "USDC",
     "quoteMintAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    "symbol": "BTC/USDC",
+    "name": "BTC/USDC",
     "tickSize": 0.1,
     "version": 3,
   },

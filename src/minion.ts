@@ -70,10 +70,10 @@ class Minion {
   // 100 messages per second limit
   private readonly _wsMessagesRateLimit: (ws: any) => boolean = RateLimit(this.MAX_MESSAGES_PER_SECOND, 1000)
 
-  private readonly _l2SnapshotsSerialized: { [symbol: string]: string } = {}
-  private readonly _l3SnapshotsSerialized: { [symbol: string]: string } = {}
-  private readonly _recentTradesSerialized: { [symbol: string]: string } = {}
-  private readonly _quotesSerialized: { [symbol: string]: string } = {}
+  private readonly _l2SnapshotsSerialized: { [market: string]: string } = {}
+  private readonly _l3SnapshotsSerialized: { [market: string]: string } = {}
+  private readonly _recentTradesSerialized: { [market: string]: string } = {}
+  private readonly _quotesSerialized: { [market: string]: string } = {}
   private readonly _marketNames: string[]
   private _listenSocket: any | undefined = undefined
 
@@ -149,7 +149,7 @@ class Minion {
 
           const [baseCurrency, quoteCurrency] = market.name.split('/')
           const serumMarket: SerumListMarketItem = {
-            symbol: market.name,
+            name: market.name,
             baseCurrency: baseCurrency!,
             quoteCurrency: quoteCurrency!,
             version: getLayoutVersion(programId),
@@ -181,25 +181,25 @@ class Minion {
   }
 
   public async processMessage(message: MessageEnvelope) {
-    const topic = `${message.type}/${message.symbol}`
+    const topic = `${message.type}/${message.market}`
 
     if (logger.level === 'debug') {
       const diff = new Date().valueOf() - new Date(message.timestamp).valueOf()
       logger.log('debug', `Processing message, topic: ${topic}, receive delay: ${diff}ms`, meta)
     }
     if (message.type === 'l2snapshot') {
-      this._l2SnapshotsSerialized[message.symbol] = message.payload
+      this._l2SnapshotsSerialized[message.market] = message.payload
     }
     if (message.type === 'l3snapshot') {
-      this._l3SnapshotsSerialized[message.symbol] = message.payload
+      this._l3SnapshotsSerialized[message.market] = message.payload
     }
 
     if (message.type === 'quote') {
-      this._quotesSerialized[message.symbol] = message.payload
+      this._quotesSerialized[message.market] = message.payload
     }
 
     if (message.type === 'recent_trades') {
-      this._recentTradesSerialized[message.symbol] = message.payload
+      this._recentTradesSerialized[message.market] = message.payload
     }
 
     if (message.publish) {
@@ -270,7 +270,7 @@ class Minion {
               } else {
                 const emptyRecentTradesMessage: RecentTrades = {
                   type: 'recent_trades',
-                  symbol: market,
+                  market,
                   timestamp: new Date().toISOString(),
                   trades: []
                 }
