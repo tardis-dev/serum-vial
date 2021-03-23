@@ -87,7 +87,7 @@ serumProducer.run((envelope) => {
 
 export type MessageEnvelope = {
   type: MessageType
-  symbol: string
+  market: string
   publish: boolean
   payload: string
   timestamp: string

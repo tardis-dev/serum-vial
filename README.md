@@ -30,7 +30,7 @@ We all know that Serum DEX is awesome, but since it's a new ecosystem, some tool
 
 Serum-vial provides real-time market data only and does not include endpoints for placing/canceling or tracking own orders as that requires handling private keys which is currently out of scope of this project.
 
-See [serum-rest-server](https://github.com/project-serum/serum-rest-server) or [@project-serum/serum](https://github.com/project-serum/serum-ts/tree/master/packages/serum) as a good alternatives.
+Both [serum-rest-server](https://github.com/project-serum/serum-rest-server) and [@project-serum/serum](https://github.com/project-serum/serum-ts/tree/master/packages/serum) provide such functionality and are recommended alternatives.
 
 <br/>
 <br/>
@@ -113,14 +113,14 @@ serum-vial
 
 #### CLI options
 
-| &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | default                                                                                                                                                             | description                                                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `port`                                                                                                                                                                                   | 8000                                                                                                                                                                | Port to bind server on                                                                                         |
-| `endpoint`                                                                                                                                                                               | https://solana-api.projectserum.com                                                                                                                                 | Solana RPC node endpoint that serum-vial uses as a data source                                                 |
-| `log-level`                                                                                                                                                                              | info                                                                                                                                                                | Log level, available options: debug, info, warn and error                                                      |
-| `minions-count`                                                                                                                                                                          | 1                                                                                                                                                                   | Minions worker threads count that are responsible for broadcasting normalized WS messages to connected clients |
-| `commitment`                                                                                                                                                                             | confirmed                                                                                                                                                           | Solana commitment level to use when communicating with RPC node, available options: confirmed and processed    |
-| `markets-json`                                                                                                                                                                           | `@project-serum/serum` [markets.json](https://github.com/project-serum/serum-ts/blob/master/packages/serum/src/markets.json) file, but only non depreciated markets | path to custom market.json definition file if one wants to run serum-vial for custom markets                   |
+| &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | default                                                                                                                                                             | description                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `port`                                                                                                                                                                                                 | 8000                                                                                                                                                                | Port to bind server on                                                                                         |
+| `endpoint`                                                                                                                                                                                             | https://solana-api.projectserum.com                                                                                                                                 | Solana RPC node endpoint that serum-vial uses as a data source                                                 |
+| `log-level`                                                                                                                                                                                            | info                                                                                                                                                                | Log level, available options: debug, info, warn and error                                                      |
+| `minions-count`                                                                                                                                                                                        | 1                                                                                                                                                                   | Minions worker threads count that are responsible for broadcasting normalized WS messages to connected clients |
+| `commitment`                                                                                                                                                                                           | confirmed                                                                                                                                                           | Solana commitment level to use when communicating with RPC node, available options: confirmed and processed    |
+| `markets-json`                                                                                                                                                                                         | `@project-serum/serum` [markets.json](https://github.com/project-serum/serum-ts/blob/master/packages/serum/src/markets.json) file, but only non depreciated markets | path to custom market.json definition file if one wants to run serum-vial for custom markets                   |
 
 <br/>
 Run `npx serum-vial --help` to see all available startup options.
@@ -145,14 +145,14 @@ docker run -p 8000:8000 -e "SV_LOG_LEVEL=debug" -d tardisdev/serum-vial:latest
 
 #### ENV Variables
 
-| &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | default                                                                                                                                                             | description                                                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `SV_PORT`                                                                                                                                                                                | 8000                                                                                                                                                                | Port to bind server on                                                                                         |
-| `SV_ENDPOINT`                                                                                                                                                                            | https://solana-api.projectserum.com                                                                                                                                 | Solana RPC node endpoint that serum-vial uses as a data source                                                 |
-| `SV_LOG_LEVEL`                                                                                                                                                                           | info                                                                                                                                                                | Log level, available options: debug, info, warn and error                                                      |
-| `SV_MINIONS_COUNT`                                                                                                                                                                       | 1                                                                                                                                                                   | Minions worker threads count that are responsible for broadcasting normalized WS messages to connected clients |
-| `SV_COMMITMENT`                                                                                                                                                                          | confirmed                                                                                                                                                           | Solana commitment level to use when communicating with RPC node, available options: confirmed and processed    |
-| `SV_MARKETS_JSON`                                                                                                                                                                        | `@project-serum/serum` [markets.json](https://github.com/project-serum/serum-ts/blob/master/packages/serum/src/markets.json) file, but only non depreciated markets | path to custom market.json definition file if one wants to run serum-vial for custom markets                   |
+| &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | default                                                                                                                                                             | description                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `SV_PORT`                                                                                                                                                                                              | 8000                                                                                                                                                                | Port to bind server on                                                                                         |
+| `SV_ENDPOINT`                                                                                                                                                                                          | https://solana-api.projectserum.com                                                                                                                                 | Solana RPC node endpoint that serum-vial uses as a data source                                                 |
+| `SV_LOG_LEVEL`                                                                                                                                                                                         | info                                                                                                                                                                | Log level, available options: debug, info, warn and error                                                      |
+| `SV_MINIONS_COUNT`                                                                                                                                                                                     | 1                                                                                                                                                                   | Minions worker threads count that are responsible for broadcasting normalized WS messages to connected clients |
+| `SV_COMMITMENT`                                                                                                                                                                                        | confirmed                                                                                                                                                           | Solana commitment level to use when communicating with RPC node, available options: confirmed and processed    |
+| `SV_MARKETS_JSON`                                                                                                                                                                                      | `@project-serum/serum` [markets.json](https://github.com/project-serum/serum-ts/blob/master/packages/serum/src/markets.json) file, but only non depreciated markets | path to custom market.json definition file if one wants to run serum-vial for custom markets                   |
 
 <br/>
 <br/>
@@ -172,7 +172,7 @@ Every message has a `type` field that is determining it's data type so it can be
 
 Each WebSocket client is required to actively send native WebSocket [pings](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#pings_and_pongs_the_heartbeat_of_websockets) to the server with interval less than 30 seconds, otherwise connection may be dropped due to inactivity.
 
-All messages timestamps are returned in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format with milliseconds, for example: `"2021-03-23T17:03:03.994Z"`.
+All messages timestamps are returned in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, for example: `"2021-03-23T17:03:03.994Z"`.
 
 <br/>
 
@@ -281,7 +281,7 @@ Error message is returned for invalid subscribe/unsubscribe messages - no existi
 
 ### Available channels & corresponding message types
 
-Subscribing to channel results in providing messages with various types
+TODO: Subscribing to channel results in providing messages with various types
 
 - `trades`
 
@@ -319,8 +319,35 @@ Subscribing to channel results in providing messages with various types
 
 ### Data messages
 
+#### `recent_trades`
 
-### `/markets`
+TODO: returned from oldest to newest
+
+```ts
+{
+  "type": "recent_trades",
+  "market": string,
+  "trades": Trade[],
+  "timestamp": string
+}
+```
+
+#### Sample `recent_trades` message
+
+<br/>
+
+#### `trade`
+
+```ts
+
+```
+
+<br/>
+<br/>
+
+## HTTP API
+
+### GET `/markets`
 
 Accepts no params and returns non depreciated Serum markets.
 
@@ -353,3 +380,14 @@ Accepts no params and returns non depreciated Serum markets.
   ...
 ]
 ```
+
+## Architecture
+
+![architecture diagram](https://user-images.githubusercontent.com/51779538/111766810-3f20e080-88a6-11eb-8c4c-54787332cc84.png)
+
+- server runs with multiple\* `Minions` worker threads and multiple `Serum Producers`
+- `Minions` are responsible for WebSockets subscriptions management, constructing L2 & L1 messages out of L3 messages published by `Serum Producer` and broadcasting all those messages to all subscribed clients
+- `Serum Producer` is responsible for connecting to Serum Node RPC WS API and subscribing all relevant accounts changes (event & request queue, bids & asks) for all supported markets as well as producing L3 market data messages that are then passed to minions and published as WebSocket messages to all subscribed clients
+- by default all non depreciated markets, can be changed by providing market.json
+
+\* multi core support via [`worker_threads`](https://nodejs.org/api/worker_threads.html) for `Minions` is linux only feature which allows multiple threads to bind to the same port, see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/ - for other OSes there's only one worker thread running
