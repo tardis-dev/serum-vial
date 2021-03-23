@@ -381,13 +381,9 @@ Accepts no params and returns non depreciated Serum markets.
 ]
 ```
 
+<br/>
+<br/>
+
 ## Architecture
 
-![architecture diagram](https://user-images.githubusercontent.com/51779538/111766810-3f20e080-88a6-11eb-8c4c-54787332cc84.png)
-
-- server runs with multiple\* `Minions` worker threads and multiple `Serum Producers`
-- `Minions` are responsible for WebSockets subscriptions management, constructing L2 & L1 messages out of L3 messages published by `Serum Producer` and broadcasting all those messages to all subscribed clients
-- `Serum Producer` is responsible for connecting to Serum Node RPC WS API and subscribing all relevant accounts changes (event & request queue, bids & asks) for all supported markets as well as producing L3 market data messages that are then passed to minions and published as WebSocket messages to all subscribed clients
-- by default all non depreciated markets, can be changed by providing market.json
-
-\* multi core support via [`worker_threads`](https://nodejs.org/api/worker_threads.html) for `Minions` is linux only feature which allows multiple threads to bind to the same port, see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/ - for other OSes there's only one worker thread running
+![architecture diagram](https://user-images.githubusercontent.com/51779538/112196249-20567d00-8c0b-11eb-86c9-409c1de75c41.png)
