@@ -24,6 +24,7 @@ We all know that Serum DEX is awesome, but since it's a new ecosystem, some tool
 - **decreased load and bandwidth consumption for Solana RPC nodes hosts** - by providing real-time market data API via serum-vial server instead of RPC node directly, hosts can decrease substantially both CPU load and bandwidth requirements as only serum-vial will be direct consumer of RPC API when it comes to market data accounts changes and will efficiently normalize and broadcast small JSON messages to all connected clients
 
 <br/>
+<br/>
 
 ## What about placing/cancelling orders endpoints?
 
@@ -31,6 +32,7 @@ Serum-vial provides real-time market data only and does not include endpoints fo
 
 See [serum-rest-server](https://github.com/project-serum/serum-rest-server) or [@project-serum/serum](https://github.com/project-serum/serum-ts/tree/master/packages/serum) as a good alternatives.
 
+<br/>
 <br/>
 
 ## Getting started
@@ -69,6 +71,7 @@ ws.onopen = () => {
 [![Try this code live on RunKit](https://img.shields.io/badge/-Try%20this%20code%20live%20on%20RunKit-c?color=05aac5)](https://runkit.com/thad/serum-vial-node-js-sample)
 
 <br/>
+<br/>
 
 ## Demo
 
@@ -80,6 +83,7 @@ Since by default serum-vial uses [`confirmed` commitment level](https://docs.sol
 
 [![See demo](https://img.shields.io/badge/-See%20Demo-c?color=05aac5)](https://serum-dex.tardis.dev/)
 
+<br/>
 <br/>
 
 ## Installation
@@ -104,6 +108,8 @@ Alternatively you can install serum-vial globally.
 npm install -g serum-vial
 serum-vial
 ```
+
+<br/>
 
 #### CLI options
 
@@ -135,6 +141,8 @@ If you'd like to switch to different Solana RPC node endpoint, change port or ru
 docker run -p 8000:8000 -e "SV_LOG_LEVEL=debug" -d tardisdev/serum-vial:latest
 ```
 
+<br/>
+
 #### ENV Variables
 
 | &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | default                                                                                                                                                             | description                                                                                                    |
@@ -147,12 +155,13 @@ docker run -p 8000:8000 -e "SV_LOG_LEVEL=debug" -d tardisdev/serum-vial:latest
 | `SV_MARKETS_JSON`                                                                                                                                                                        | `@project-serum/serum` [markets.json](https://github.com/project-serum/serum-ts/blob/master/packages/serum/src/markets.json) file, but only non depreciated markets | path to custom market.json definition file if one wants to run serum-vial for custom markets                   |
 
 <br/>
-  <br/>
+<br/>
 
 ## SSL/TLS Support
 
 Serum-vial supports [SSL/TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) but it's not enabled by default. In order to enable it you need to set `CERT_FILE_NAME` env var pointing to the certificate file and `KEY_FILE_NAME` pointing to private key of that certificate.
 
+<br/>
 <br/>
 
 ## WebSocket API
@@ -164,6 +173,8 @@ Every message has a `type` field that is determining it's data type so it can be
 Each WebSocket client is required to actively send native WebSocket [pings](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#pings_and_pongs_the_heartbeat_of_websockets) to the server with interval less than 30 seconds, otherwise connection may be dropped due to inactivity.
 
 All messages timestamps are returned in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format with milliseconds, for example: `"2021-03-23T17:03:03.994Z"`.
+
+<br/>
 
 ### Endpoint URL
 
@@ -205,8 +216,6 @@ ws.onopen = () => {
 }
 ```
 
-<br/>
-
 ##### Sample `subscribe` message
 
 ```json
@@ -232,8 +241,6 @@ Once a subscribe (or unsubscribe) message is received by the server, it will res
 }
 ```
 
-<br/>
-
 ##### Sample `subscribed` confirmation message
 
 ```json
@@ -258,8 +265,6 @@ Error message is returned for invalid subscribe/unsubscribe messages - no existi
   "timestamp": "string
 }
 ```
-
-<br/>
 
 ##### Sample `error` message
 
