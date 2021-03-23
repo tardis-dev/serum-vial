@@ -88,7 +88,7 @@ Since by default serum-vial uses [`confirmed` commitment level](https://docs.sol
 
 ## Installation
 
-## npx <sub>(requires Node.js >= 15 and git installed on host machine)</sub>
+### npx <sub>(requires Node.js >= 15 and git installed on host machine)</sub>
 
 Installs and starts serum-vial server running on port `8000`.
 
@@ -127,7 +127,7 @@ Run `npx serum-vial --help` to see all available startup options.
 <br/>
 <br/>
 
-## Docker
+### Docker
 
 Pulls and runs latest version of [`tardisdev/serum-vial` Docker Image](https://hub.docker.com/r/tardisdev/serum-vial) on port `8000`.
 
@@ -157,7 +157,7 @@ docker run -p 8000:8000 -e "SV_LOG_LEVEL=debug" -d tardisdev/serum-vial:latest
 <br/>
 <br/>
 
-## SSL/TLS Support
+### SSL/TLS Support
 
 Serum-vial supports [SSL/TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) but it's not enabled by default. In order to enable it you need to set `CERT_FILE_NAME` env var pointing to the certificate file and `KEY_FILE_NAME` pointing to private key of that certificate.
 
