@@ -1,13 +1,13 @@
-import { Market, getLayoutVersion } from '@project-serum/serum'
+import { getLayoutVersion, Market } from '@project-serum/serum'
 import { Connection, PublicKey } from '@solana/web3.js'
 import {
   App,
-  SSLApp,
   HttpResponse,
   SHARED_COMPRESSOR,
+  SSLApp,
   TemplatedApp,
-  WebSocket,
-  us_listen_socket_close
+  us_listen_socket_close,
+  WebSocket
 } from 'uWebSockets.js'
 import { isMainThread, threadId, workerData } from 'worker_threads'
 import { CHANNELS, MESSAGE_TYPES_PER_CHANNEL, OPS } from './consts'

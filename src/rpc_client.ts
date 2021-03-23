@@ -1,7 +1,7 @@
 import { Market } from '@project-serum/serum'
 import { AccountInfo, Commitment, PublicKey } from '@solana/web3.js'
-import fetch from 'node-fetch'
 import AbortController from 'abort-controller'
+import fetch from 'node-fetch'
 import { PassThrough } from 'stream'
 import WebSocket from 'ws'
 import { executeAndRetry, wait } from './helpers'
