@@ -34,7 +34,7 @@ Please see [serum-rest-server](https://github.com/project-serum/serum-rest-serve
 
 ## Getting started
 
-Run following code snippet in the browser Dev Tools directly or in Node.js (requires installation of `ws` lib, [see](https://runkit.com/thad/serum-vial-node-js-sample)).
+Run the code snippet below in the browser Dev Tools directly or in Node.js (requires installation of `ws` lib, [see](https://runkit.com/thad/serum-vial-node-js-sample)).
 
 ```js
 // connect to hosted demo server
@@ -71,9 +71,11 @@ ws.onopen = () => {
 
 ## Demo
 
-Demo of Serum DEX UI backed by serum-vial WebSocket API for trade and order book data is available at [serum-dex.tardis.dev](https://serum-dex.tardis.dev/).
+Demo of Serum DEX UI backed by serum-vial WebSocket API for trade and order book data is available at:
 
-Since by default serum-vial uses [`confirmed` commitment level](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment) for getting accounts notification from RPC node, it may sometimes feel bit lagging vs default DEX UI which uses [`recent/processed` commitment](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment).
+[serum-dex.tardis.dev](https://serum-dex.tardis.dev/)
+
+Since by default serum-vial uses [`confirmed` commitment level](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment) for getting accounts notification from RPC node, it may sometimes feel bit lagging when it comes to order book updates vs default DEX UI which uses [`recent/processed` commitment](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment). Trade data is provided faster since by default DEX UI is pooling `eventQueue` account data on interval due to it's size, and serum-vial uses real-time `eventQueue` account notification as a source for trade messages.
 
 [![See demo](https://img.shields.io/badge/-See%20Demo-c?color=05aac5)](https://serum-dex.tardis.dev/)
 
@@ -81,23 +83,35 @@ Since by default serum-vial uses [`confirmed` commitment level](https://docs.sol
 
 ## Installation
 
-- ### npx <sub>(requires Node.js >= 15 installed on host machine)</sub>
+- ### npx <sub>(requires Node.js >= 15 and git installed on host machine)</sub>
 
-  That will start serum-vial server running on port `8000`
+Install and start serum-vial server running on port `8000`
 
-  ```sh
-  npx serum-vial
-  ```
+```sh
+npx serum-vial
+```
 
-  If you'd like to switch to different Serum Node endpoint, change port or run with debug logs enabled, just add one of the available CLI options:
+If you'd like to switch to different Serum Node endpoint, change port or run with debug logs enabled, just add one of the available CLI options.
 
-  ```sh
-  npx serum-vial --endpoint https://solana-api.projectserum.com --log-level debug --port 8080
-  ```
+```sh
+npx serum-vial --endpoint https://solana-api.projectserum.com --log-level debug --port 8080
+```
 
-  Run `npx serum-vial --help` to see all available startup options (node endpoint url, port etc.)
-  <br/>
-  <br/>
+### CLI options
+
+| name            | default                                                                                                                                         | description                                                                                                    |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `port`          | 8000                                                                                                                                            | Port to bind server on                                                                                         |
+| `endpoint`      | https://solana-api.projectserum.com                                                                                                             | Solana RPC node endpoint                                                                                       |
+| `log-level`     | info                                                                                                                                            | Log level, available options: 'debug', 'info', 'warn' and 'error'                                              |
+| `minions-count` | 1                                                                                                                                               | Minions worker threads count that handle WS pub/sub messages broadcast                                         |
+| `commitment`    | confirmed                                                                                                                                       | Solana commitment level to use when communicating with RPC node, available options: 'confirmed' or 'processed' |
+| `markets-json`  | [@project-serum/serum](https://github.com/project-serum/serum-ts/tree/master/packages/serum) market.json file, but only non depreciated markets | Custom market.json definition file if one wants to run serum-vial for custom markets                           |
+
+<br/>
+Run `npx serum-vial --help` to see all available startup options.
+<br/>
+<br/>
 
 - ### npm <sub>(requires Node.js >= 12 installed on host machine)</sub>
 
