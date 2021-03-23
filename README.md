@@ -97,16 +97,16 @@ If you'd like to switch to different Serum Node endpoint, change port or run wit
 npx serum-vial --endpoint https://solana-api.projectserum.com --log-level debug --port 8080
 ```
 
-### CLI options
+#### CLI options
 
-| name            | default                                                                                                                                         | description                                                                                                    |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `port`          | 8000                                                                                                                                            | Port to bind server on                                                                                         |
-| `endpoint`      | https://solana-api.projectserum.com                                                                                                             | Solana RPC node endpoint                                                                                       |
-| `log-level`     | info                                                                                                                                            | Log level, available options: 'debug', 'info', 'warn' and 'error'                                              |
-| `minions-count` | 1                                                                                                                                               | Minions worker threads count that handle WS pub/sub messages broadcast                                         |
-| `commitment`    | confirmed                                                                                                                                       | Solana commitment level to use when communicating with RPC node, available options: 'confirmed' or 'processed' |
-| `markets-json`  | [@project-serum/serum](https://github.com/project-serum/serum-ts/tree/master/packages/serum) market.json file, but only non depreciated markets | Custom market.json definition file if one wants to run serum-vial for custom markets                           |
+| name            | default                                                                                                                                                             | description                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `port`          | 8000                                                                                                                                                                | Port to bind server on                                                                                         |
+| `endpoint`      | https://solana-api.projectserum.com                                                                                                                                 | Solana RPC node endpoint that serum-vial uses as a data source                                                 |
+| `log-level`     | info                                                                                                                                                                | Log level, available options: debug, info, warn and error                                                      |
+| `minions-count` | 1                                                                                                                                                                   | Minions worker threads count that are responsible for broadcasting normalized WS messages to connected clients |
+| `commitment`    | confirmed                                                                                                                                                           | Solana commitment level to use when communicating with RPC node, available options: confirmed and processed    |
+| `markets-json`  | `@project-serum/serum` [markets.json](https://github.com/project-serum/serum-ts/blob/master/packages/serum/src/markets.json) file, but only non depreciated markets | path to custom market.json definition file if one wants to run serum-vial for custom markets                   |
 
 <br/>
 Run `npx serum-vial --help` to see all available startup options.

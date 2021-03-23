@@ -21,25 +21,26 @@ const argv = yargs
 
   .option('endpoint', {
     type: 'string',
-    describe: 'Solana node endpoint',
+    describe: 'Solana RPC node endpoint that serum-vial uses as a data source',
     default: DEFAULT_NODE_ENDPOINT
   })
 
   .option('log-level', {
     type: 'string',
-    describe: 'Enable debug logs.',
+    describe: 'Log level',
     choices: ['debug', 'info', 'warn', 'error'],
     default: 'info'
   })
   .option('minions-count', {
     type: 'number',
-    describe: 'Minions worker threads count (handle WS pub/sub)',
+    describe:
+      'Minions worker threads count that are responsible for broadcasting normalized WS messages to connected clients',
     default: 1
   })
 
   .option('validate-l3-diffs', {
     type: 'boolean',
-    describe: 'turn on validation of L3 diffs correctness (can impact perf)',
+    describe: 'Turns on validation of L3 diffs correctness (can impact perf)',
     default: false
   })
 
@@ -52,7 +53,7 @@ const argv = yargs
 
   .option('markets-json', {
     type: 'string',
-    describe: 'Custom market.json definition file',
+    describe: 'Path to custom market.json definition file',
     default: ''
   })
 
