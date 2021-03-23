@@ -1,8 +1,27 @@
 <img src="https://raw.githubusercontent.com/tardis-dev/serum-vial/master/logo.svg">
 
-# serum-vial: real-time market data server for Serum DEX
+# serum-vial: real-time WebSocket market data API for Serum
 
 [![Version](https://img.shields.io/npm/v/serum-vial.svg)](https://www.npmjs.org/package/serum-vial)
+[![Docker version](https://img.shields.io/docker/v/tardisdev/serum-vial/latest?label=Docker)](https://hub.docker.com/r/tardisdev/serum-vial)
+
+<br/>
+
+## Why?
+
+We all know that Serum DEX is awesome, but since it's a new ecosystem, some tooling around it may not be so convenient and productive especially from centralized exchanges APIs users perspective. Serum-vial which is a real-time WebSocket market data API server for Serum DEX hopes to alleviate some of those issues by offering:
+
+- **familiar experience for centralized exchanges APIs users**
+
+  - **WebSocket API with Pub/Sub flow** - subscribe to selected channels and markets and receive real-time data as easy to parse JSON messages that can be consumed from any language supporting WebSocket protocol
+
+  - **incremental L2 order book updates** - instead of decoding Serum market `asks` and `bids` accounts for each account change in order to detect order book changes, receive initial L2 snapshot and incremental updates as JSON messages real-time
+
+  - **tick-by-tick trades** - instead of decoding `eventQueue` account data which can be large (>1MB) and in practice it's hard to consume real-time directly from Solana RPC node due to it's size, receive individual trade messages real-time
+
+  - **real-time L3 data** - receive updates on individual order level: opens, changes, fills and cancellations for each order Serum DEX handles
+
+- **decreased load and bandwidth consumption for solana RPC nodes hosts** - by providing real-time market data API via serum-vial server instead of RPC node, hosts can decrease substantially both CPU load and bandwidth requirements as only serum-vial will be direct consumer of RPC API when it comes to market data accounts changes and will efficiently normalize and broadcast small JSON messages to all connected clients
 
 <br/>
 
