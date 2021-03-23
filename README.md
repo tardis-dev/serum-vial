@@ -172,6 +172,12 @@ docker run -p 8000:8000 -e "SV_ENDPOINT=https://solana-api.projectserum.com" -e 
 <br/>
   <br/>
 
+## SSL/TLS Support
+
+Serum-vial supports [SSL/TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) but it's not enabled by default. In order to enable it you need to set `CERT_FILE_NAME` env var pointing to the certificate file and `KEY_FILE_NAME` pointing to private key of that certificate.
+
+<br/>
+
 ## Architecture
 
 ![architecture diagram](https://user-images.githubusercontent.com/51779538/111766810-3f20e080-88a6-11eb-8c4c-54787332cc84.png)
