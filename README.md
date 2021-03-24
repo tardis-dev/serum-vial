@@ -15,11 +15,11 @@ We all know that Serum DEX is awesome, but since it's a new ecosystem, some tool
 
   - **WebSocket API with Pub/Sub flow** - subscribe to selected channels and markets and receive real-time data as easy to parse JSON messages that can be consumed from any language supporting WebSocket protocol
 
-  - **incremental L2 order book updates** - instead of decoding Serum market `asks` and `bids` accounts for each account change in order to detect order book changes, receive initial L2 snapshot and incremental updates as JSON messages real-time over WebSocket connection
+  - **incremental L2 order book updates** - instead of decoding Serum market `asks` and `bids` accounts for each account change in order to detect order book changes, receive [initial L2 snapshot](#l2snapshot) and [incremental updates](#l2update) as JSON messages real-time over WebSocket connection
 
-  - **tick-by-tick trades** - instead of decoding `eventQueue` account data which can be large (>1MB) and in practice it's hard to consume real-time directly from Solana RPC node due to it's size, receive individual trade messages real-time over WebSocket connection
+  - **tick-by-tick trades** - instead of decoding `eventQueue` account data which can be large (>1MB) and in practice it's hard to consume real-time directly from Solana RPC node due to it's size, receive individual [`trade`](#trade) messages real-time over WebSocket connection
 
-  - **real-time L3 data** - receive the most granular updates on individual order level, opens, changes, fills and cancellations for each order Serum DEX handles
+  - **real-time L3 data** - receive the most granular updates on individual order level: [`open`](#open), [`change`](#change), [`fill`](#fill) and [`done`](#done) messages for every order that Serum DEX processes
 
 - **decreased load and bandwidth consumption for Solana RPC nodes hosts** - by providing real-time market data API via serum-vial server instead of RPC node directly, hosts can decrease substantially both CPU load and bandwidth requirements as only serum-vial will be direct consumer of RPC API when it comes to market data accounts changes and will efficiently normalize and broadcast small JSON messages to all connected clients
 
@@ -174,9 +174,9 @@ Each WebSocket client is required to actively send native WebSocket [pings](http
 
 ### Endpoint URL
 
-#### `ws://localhost:8000/v1/ws`
+- [ws://localhost:8000/v1/ws](ws://localhost:8000/v1/ws) - assuming serum-vial runs locally on default port without SSL enabled
 
-(assuming serum-vial runs locally on default port without SSL enabled)
+- [wss://serum-vial.tardis.dev/v1/ws](wss://serum-vial.tardis.dev/v1/ws) - demo serum-vial server endpoint
 
 <br/>
 
@@ -275,38 +275,40 @@ Error message is returned for invalid subscribe/unsubscribe messages - no existi
 <br/>
 <br/>
 
-### Available channels & corresponding message types
+### Supported channels & corresponding message types
 
 - `trades`
 
-  - `recent_trades`
-  - `trade`
+  - [`recent_trades`](#recent_trades)
+  - [`trade`](#trade)
 
 - `level1`
 
-  - `recent_trades`
-  - `trade`
-  - `quote`
+  - [`recent_trades`](#recent_trades)
+  - [`trade`](#trade)
+  - [`quote`](#quote)
 
 - `level2`
 
-  - `l2snapshot`
-  - `l2update`
-  - `recent_trades`
-  - `trade`
+  - [`l2snapshot`](#l2snapshot)
+  - [`l2update`](#l2update)
+  - [`recent_trades`](#recent_trades)
+  - [`trade`](#trade)
 
 - `level3`
 
-  - `l3snapshot`
-  - `open`
-  - `fill`
-  - `change`
-  - `done`
+  - [`l3snapshot`](#l3snapshot)
+  - [`open`](#open)
+  - [`fill`](#fill)
+  - [`change`](#change)
+  - [`done`](#done)
 
 <br/>
 <br/>
 
-### Available markets
+### Supported markets
+
+Markets supported by serum-vial server can be queried via [`GET /markets`](#get-markets) HTTP endpoint (`[].name` field).
 
 <br/>
 <br/>
@@ -314,18 +316,27 @@ Error message is returned for invalid subscribe/unsubscribe messages - no existi
 ### Data messages
 
 - `type` is determining message's data type so it can be handled appropriately
-- `timestamp` when message has been received from node RPC API in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, for example: `"2021-03-23T17:03:03.994Z"`
+
+- `timestamp` when message has been received from node RPC API in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format with milliseconds, for example: "2021-03-23T17:03:03.994Z"
+
 - `slot` is a [Solana's slot](https://docs.solana.com/terminology#slot) number for which message has produced
+
 - `version` of Serum DEX program layout (DEX version)
+
 - `account` is an open orders account address
+
 - `accountSlot` is a an open orders account slot number
+
 - `price` and `size` are provided as strings to preserve precision
 
 <br/>
 
 #### `recent_trades`
 
-Recent trades (up to 100) ordered by timestamp in ascending order (from oldest to newest) returned immediately after successful subscription, every trade has the same format as `trade` message.
+Up to 100 recent trades pushed immediately after successful subscription confirmation.
+
+- every trade in `trades` array has the same format as [`trade`](#trade) message
+- trades are ordered by timestamp from oldest to newest
 
 ```ts
 {
@@ -363,6 +374,11 @@ Recent trades (up to 100) ordered by timestamp in ascending order (from oldest t
 
 #### `trade`
 
+Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQueue` account).
+
+- `side` describes a liquidity taker side
+- `id` field is an unique id constructed by joining taker order id, order size and timestamp (as milliseconds since epoch)
+
 ```ts
 {
   "type": "trade",
@@ -394,41 +410,97 @@ Recent trades (up to 100) ordered by timestamp in ascending order (from oldest t
 ```
 
 <br/>
+
+### `quote`
+
+Pushed real-time for any change in best bid/ask price or size for a given market (decoded from the `bids` and `asks` accounts).
+
+- `bestAsk` and `bestBid` are provided as two item arrays where first item is price and second item is a size
+
+```ts
+{
+  "type": "quote",
+  "market": string,
+  "timestamp": string,
+  "slot": number,
+  "version": number,
+  "bestAsk": [string, string] | undefined,
+  "bestBid": [string, string] | undefined
+}
+```
+
+#### Sample `quote` message
+
+```json
+{
+  "type": "quote",
+  "market": "BTC/USDC",
+  "timestamp": "2021-03-24T07:11:57.186Z",
+  "slot": 70544253,
+  "version": 3,
+  "bestAsk": ["55336.1", "5.0960"],
+  "bestBid": ["55285.6", "7.5000"]
+}
+```
+
+<br/>
+
+### `l2snapshot`
+
+<br/>
 <br/>
 
 ## HTTP API
 
 ### GET `/markets`
 
-Accepts no params and returns non depreciated Serum markets.
+Returns Serum DEX markets list supported by serum-vial instance (it can be updated by providing custom markets.json file).
 
-#### Sample request & response
+<br/>
 
-[http://localhost:8000/v1/markets](http://localhost:8000/v1/markets)
+### Endpoint URL
+
+- [http://localhost:8000/v1/markets](http://localhost:8000/v1/markets) - assuming serum-vial runs locally on default port without SSL enabled
+
+- [https://serum-vial.tardis.dev/v1/markets](https://serum-vial.tardis.dev/v1/markets) - demo serum-vial server endpoint
+
+<br/>
+
+### Response format
+
+```ts
+{
+  "name": string,
+  "baseMintAddress": string,
+  "quoteMintAddress": string,
+  "version": number,
+  "address": string,
+  "programId": string,
+  "baseCurrency": string,
+  "quoteCurrency": string,
+  "tickSize": number,
+  "minOrderSize": number,
+  "deprecated": boolean
+}[]
+```
+
+#### Sample response
 
 ```json
 [
- {
-    "symbol": "BTC/USDT",
-    "deprecated": false,
-    "address": "EXnGBBSamqzd3uxEdRLUiYzjJkTwQyorAaFXdfteuGXe",
-    "programId": "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o",
-    "tickSize": 0.1,
-    "minOrderSize": 0.0001,
-    "supportsReferralFees": true,
-    "supportsSrmFeeDiscounts": true
-  },
   {
-    "symbol": "BTC/USDC",
-    "deprecated": false,
-    "address": "5LgJphS6D5zXwUVPU7eCryDBkyta3AidrJ5vjNU6BcGW",
-    "programId": "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o",
+    "name": "BTC/USDC",
+    "baseCurrency": "BTC",
+    "quoteCurrency": "USDC",
+    "version": 3,
+    "address": "A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw",
+    "programId": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+    "baseMintAddress": "9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E",
+    "quoteMintAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
     "tickSize": 0.1,
     "minOrderSize": 0.0001,
-    "supportsReferralFees": true,
-    "supportsSrmFeeDiscounts": true
+    "deprecated": false
   }
-  ...
 ]
 ```
 
