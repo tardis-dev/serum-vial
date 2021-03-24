@@ -204,8 +204,8 @@ ws.onopen = () => {
 
 #### Subscribe/unsubscribe message format
 
-- see [supported channels & corresponding data messages types] (#supported-channels--corresponding-message-types)
-- see [supported markets] (#supported-markets)
+- see [supported channels & corresponding data messages types](#supported-channels--corresponding-message-types)
+- see [supported markets](#supported-markets)
 
 ```ts
 {
@@ -328,12 +328,9 @@ Markets supported by serum-vial server can be queried via [`GET /markets`](#get-
 
 - `version` of Serum DEX program layout (DEX version)
 
-- `account` is an open orders account address
-
-- `accountSlot` is a an open orders account slot number
-
 - `price` and `size` are provided as strings to preserve precision
 
+<br/>
 <br/>
 
 #### `recent_trades`
@@ -420,7 +417,7 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
 
 Pushed real-time for any change in best bid/ask price or size for a given market (decoded from the `bids` and `asks` accounts).
 
-- `bestAsk` and `bestBid` are tuples where first item is price and second is a size
+- `bestAsk` and `bestBid` are tuples where first item is a price and second is a size of the best bid/ask
 
 ```ts
 {
@@ -456,9 +453,9 @@ Entire up-to-date order book snapshot with orders aggregated by price level push
 
 - `asks` and `bids` arrays contain tuples where first item of a tuple is a price level and second one is a size of the resting orders at that price level
 
-- it can be pushed for an active connection as well when underlying server connection to RPC node has been restarted, in such scenario locally maintained order book should be re-initialized with new snapshot
+- it can be pushed for an active connection as well when underlying server connection to the RPC node has been restarted, in such scenario locally maintained order book should be re-initialized with a new snapshot
 
-- together with [`l2update`](#l2update) can be used to maintain local up-to-date full order book state
+- together with [`l2update`](#l2update) messages it can be used to maintain local up-to-date full order book state
 
 ```ts
 {
@@ -500,8 +497,8 @@ Entire up-to-date order book snapshot with orders aggregated by price level push
 
 Pushed real-time for any change to the order book for a given market with updated price levels and sizes since the previous update (decoded from the `bids` and `asks` accounts).
 
-- together with [`l2snapshot`](#l2snapshot) can be used to maintain local up-to-date full order book state
-- `asks` and `bids` arrays contain updates which are provided as tuples where first item is an updated price level and second one is an updated size of the resting orders at that price level (absolute value, not delta)
+- together with [`l2snapshot`](#l2snapshot), `l2update` messages can be used to maintain local up-to-date full order book state
+- `asks` and `bids` arrays contain updates which are provided as a tuples where first item is an updated price level and second one is an updated size of the resting orders at that price level (absolute value, not delta)
 - if size is set to `0` it means that such price level does not exist anymore and shall be removed from locally maintained order book
 
 ```ts
@@ -537,8 +534,80 @@ Pushed real-time for any change to the order book for a given market with update
 
 ### `l3snapshot`
 
-```ts
+Entire up-to-date order book snapshot with **all individual orders** pushed immediately after successful subscription confirmation.
 
+- `clientId` is an client provided order id
+
+- `account` is an open orders account address
+
+- `accountSlot` is a an open orders account slot number
+
+- it can be pushed for an active connection as well when underlying server connection to the RPC node has been restarted, in such scenario locally maintained L3 order book should be re-initialized with a new snapshot
+
+```ts
+{
+  "type": "l3snapshot",
+  "market": string,
+  "timestamp": string,
+  "slot": number,
+  "version": number,
+  "asks": {
+    "price": string,
+    "size": string,
+    "side": "sell",
+    "orderId": string,
+    "clientId": string,
+    "account": string,
+    "accountSlot": number,
+    "feeTier": number
+  }[],
+  "bids": {
+    "price": string,
+    "size": string,
+    "side": "buy",
+    "orderId": string,
+    "clientId": string,
+    "account": string,
+    "accountSlot": number,
+    "feeTier": number
+  }[]
+}
+```
+
+#### Sample `l3snapshot` message
+
+```json
+{
+  "type": "l3snapshot",
+  "market": "BTC/USDC",
+  "timestamp": "2021-03-24T09:49:51.070Z",
+  "slot": 70560748,
+  "version": 3,
+  "asks": [
+    {
+      "orderId": "10430028906948338708824594",
+      "clientId": "13065347387987527730",
+      "side": "sell",
+      "price": "56541.3",
+      "size": "4.9049",
+      "account": "EXkXcPkqFwqJPXpJdTHMdvmLE282PRShqwMTteWcfz85",
+      "accountSlot": 8,
+      "feeTier": 3
+    }
+  ],
+  "bids": [
+    {
+      "orderId": "10414533641926422683532775",
+      "clientId": "1616579378239885365",
+      "side": "buy",
+      "price": "56457.2",
+      "size": "7.5000",
+      "account": "6Yqus2UYf1wSaKBE4GSLeE2Ge225THeyPcgWBaoGzx3e",
+      "accountSlot": 10,
+      "feeTier": 6
+    }
+  ]
+}
 ```
 
 <br/>
