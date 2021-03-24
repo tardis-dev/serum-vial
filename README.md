@@ -871,3 +871,10 @@ Returns Serum DEX markets list supported by serum-vial instance (it can be updat
 ## Architecture
 
 ![architecture diagram](https://user-images.githubusercontent.com/51779538/112196249-20567d00-8c0b-11eb-86c9-409c1de75c41.png)
+
+<br/>
+<br/>
+
+## Credits
+
+##### This project was possible thanks to [ecoSerum Grant](https://projectserum.com/grants).
