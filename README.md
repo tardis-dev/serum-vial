@@ -174,15 +174,15 @@ Each WebSocket client is required to actively send native WebSocket [pings](http
 
 ### Endpoint URL
 
-- [ws://localhost:8000/v1/ws](ws://localhost:8000/v1/ws) - assuming serum-vial runs locally on default port without SSL enabled
+- **[ws://localhost:8000/v1/ws](ws://localhost:8000/v1/ws)** - assuming serum-vial runs locally on default port without SSL enabled
 
-- [wss://serum-vial.tardis.dev/v1/ws](wss://serum-vial.tardis.dev/v1/ws) - demo serum-vial server endpoint
+- **[wss://serum-vial.tardis.dev/v1/ws](wss://serum-vial.tardis.dev/v1/ws)** - demo serum-vial server endpoint
 
 <br/>
 
 ### Subscribing to data feeds
 
-To begin receiving real-time market data feed messages, you must first send a subscribe message to the server indicating which channels and markets to receive.
+To begin receiving real-time market data feed messages, you must first send a subscribe message to the server indicating [channels](#supported-channels--corresponding-message-types) and [markets](#supported-markets) for which you want the data being received.
 
 If you want to unsubscribe from channel and markets, send an unsubscribe message. The structure is equivalent to subscribe messages except `op` field which should be set to `"op": "unsubscribe"`.
 
@@ -203,6 +203,9 @@ ws.onopen = () => {
 <br/>
 
 #### Subscribe/unsubscribe message format
+
+- see [supported channels & corresponding data messages types] (#supported-channels--corresponding-message-types)
+- see [supported markets] (#supported-markets)
 
 ```ts
 {
@@ -226,7 +229,7 @@ ws.onopen = () => {
 
 #### Subscription confirmation message format
 
-Once a subscribe (or unsubscribe) message is received by the server, it will respond with a `subscribed` (or `unsubscribed`) confirmation message or `error` if received message was invalid.
+Once a subscribe (or unsubscribe) message is received by the server, it will push `subscribed` (or `unsubscribed`) confirmation message or `error` if received message was invalid.
 
 ```ts
 {
@@ -252,7 +255,7 @@ Once a subscribe (or unsubscribe) message is received by the server, it will res
 
 #### Error message format
 
-Error message is returned for invalid subscribe/unsubscribe messages - no existing market, invalid channel name etc.
+Error message is pushed for invalid subscribe/unsubscribe messages - no existing market, invalid channel name etc.
 
 ```ts
 {
@@ -276,6 +279,8 @@ Error message is returned for invalid subscribe/unsubscribe messages - no existi
 <br/>
 
 ### Supported channels & corresponding message types
+
+When subscribed to the channel, server will push data messages as listed below.
 
 - `trades`
 
@@ -415,7 +420,7 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
 
 Pushed real-time for any change in best bid/ask price or size for a given market (decoded from the `bids` and `asks` accounts).
 
-- `bestAsk` and `bestBid` are provided as two item arrays where first item is price and second item is a size
+- `bestAsk` and `bestBid` are tuples where first item is price and second is a size
 
 ```ts
 {
@@ -424,8 +429,8 @@ Pushed real-time for any change in best bid/ask price or size for a given market
   "timestamp": string,
   "slot": number,
   "version": number,
-  "bestAsk": [string, string] | undefined,
-  "bestBid": [string, string] | undefined
+  "bestAsk": [price: string, size: string] | undefined,
+  "bestBid": [price: string, size: string] | undefined
 }
 ```
 
@@ -446,6 +451,95 @@ Pushed real-time for any change in best bid/ask price or size for a given market
 <br/>
 
 ### `l2snapshot`
+
+Entire up-to-date order book snapshot with orders aggregated by price level pushed immediately after successful subscription confirmation.
+
+- `asks` and `bids` arrays contain tuples where first item of a tuple is a price level and second one is a size of the resting orders at that price level
+
+- it can be pushed for an active connection as well when underlying server connection to RPC node has been restarted, in such scenario locally maintained order book should be re-initialized with new snapshot
+
+- together with [`l2update`](#l2update) can be used to maintain local up-to-date full order book state
+
+```ts
+{
+  "type": "l2snapshot",
+  "market": string,
+  "timestamp": string,
+  "slot": number,
+  "version": number,
+  "asks": [price: string, size: string][],
+  "bids": [price: string, size: string][]
+}
+```
+
+#### Sample `l2snapshot` message
+
+```json
+{
+  "type": "l2snapshot",
+  "market": "BTC/USDC",
+  "timestamp": "2021-03-24T09:00:53.087Z",
+  "slot": 70555623,
+  "version": 3,
+  "asks": [
+    ["56463.3", "8.6208"],
+    ["56474.3", "5.8632"],
+    ["56496.4", "3.7627"]
+  ],
+  "bids": [
+    ["56386.0", "4.8541"],
+    ["56370.1", "6.8054"],
+    ["56286.3", "8.6631"]
+  ]
+}
+```
+
+<br/>
+
+### `l2update`
+
+Pushed real-time for any change to the order book for a given market with updated price levels and sizes since the previous update (decoded from the `bids` and `asks` accounts).
+
+- together with [`l2snapshot`](#l2snapshot) can be used to maintain local up-to-date full order book state
+- `asks` and `bids` arrays contain updates which are provided as tuples where first item is an updated price level and second one is an updated size of the resting orders at that price level (absolute value, not delta)
+- if size is set to `0` it means that such price level does not exist anymore and shall be removed from locally maintained order book
+
+```ts
+{
+  "type": "l2update",
+  "market": string,
+  "timestamp": string,
+  "slot": number,
+  "version": number,
+  "asks": [price: string, size: string][],
+  "bids": [price: string, size: string][]
+}
+```
+
+#### Sample `l2update` message
+
+```json
+{
+  "type": "l2update",
+  "market": "BTC/USDC",
+  "timestamp": "2021-03-24T09:00:55.586Z",
+  "slot": 70555627,
+  "version": 3,
+  "asks": [["56511.5", "7.5000"]],
+  "bids": [
+    ["56421.6", "0.0000"],
+    ["56433.6", "5.9475"]
+  ]
+}
+```
+
+<br/>
+
+### `l3snapshot`
+
+```ts
+
+```
 
 <br/>
 <br/>
