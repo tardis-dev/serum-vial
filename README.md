@@ -215,7 +215,7 @@ ws.onopen = () => {
 }
 ```
 
-##### Sample `subscribe` message
+##### sample `subscribe` message
 
 ```json
 {
@@ -240,7 +240,7 @@ Once a subscribe (or unsubscribe) message is received by the server, it will pus
 }
 ```
 
-##### Sample `subscribed` confirmation message
+##### sample `subscribed` confirmation message
 
 ```json
 {
@@ -265,7 +265,7 @@ Error message is pushed for invalid subscribe/unsubscribe messages - no existing
 }
 ```
 
-##### Sample `error` message
+##### sample `error` message
 
 ```json
 {
@@ -331,7 +331,6 @@ Markets supported by serum-vial server can be queried via [`GET /markets`](#get-
 - `price` and `size` are provided as strings to preserve precision
 
 <br/>
-<br/>
 
 #### `recent_trades`
 
@@ -349,7 +348,7 @@ Up to 100 recent trades pushed immediately after successful subscription confirm
 }
 ```
 
-#### Sample `recent_trades` message
+#### sample `recent_trades` message
 
 ```json
 {
@@ -379,6 +378,7 @@ Up to 100 recent trades pushed immediately after successful subscription confirm
 Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQueue` account).
 
 - `side` describes a liquidity taker side
+
 - `id` field is an unique id constructed by joining taker order id, order size and timestamp (as milliseconds since epoch)
 
 ```ts
@@ -395,7 +395,7 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
 }
 ```
 
-#### Sample `trade` message
+#### sample `trade` message
 
 ```
 {
@@ -431,7 +431,7 @@ Pushed real-time for any change in best bid/ask price or size for a given market
 }
 ```
 
-#### Sample `quote` message
+#### sample `quote` message
 
 ```json
 {
@@ -469,7 +469,7 @@ Entire up-to-date order book snapshot with orders aggregated by price level push
 }
 ```
 
-#### Sample `l2snapshot` message
+#### sample `l2snapshot` message
 
 ```json
 {
@@ -498,7 +498,9 @@ Entire up-to-date order book snapshot with orders aggregated by price level push
 Pushed real-time for any change to the order book for a given market with updated price levels and sizes since the previous update (decoded from the `bids` and `asks` accounts).
 
 - together with [`l2snapshot`](#l2snapshot), `l2update` messages can be used to maintain local up-to-date full order book state
+
 - `asks` and `bids` arrays contain updates which are provided as a tuples where first item is an updated price level and second one is an updated size of the resting orders at that price level (absolute value, not delta)
+
 - if size is set to `0` it means that such price level does not exist anymore and shall be removed from locally maintained order book
 
 ```ts
@@ -513,7 +515,7 @@ Pushed real-time for any change to the order book for a given market with update
 }
 ```
 
-#### Sample `l2update` message
+#### sample `l2update` message
 
 ```json
 {
@@ -541,6 +543,8 @@ Entire up-to-date order book snapshot with **all individual orders** pushed imme
 - `account` is an open orders account address
 
 - `accountSlot` is a an open orders account slot number
+
+- together with [`open`](#open), [`change`](#change), [`fill`](#fill) and [`done`](#done) messages it can be used to maintain local up to date Level 3 order book state
 
 - it can be pushed for an active connection as well when underlying server connection to the RPC node has been restarted, in such scenario locally maintained L3 order book should be re-initialized with a new snapshot
 
@@ -574,7 +578,7 @@ Entire up-to-date order book snapshot with **all individual orders** pushed imme
 }
 ```
 
-#### Sample `l3snapshot` message
+#### sample `l3snapshot` message
 
 ```json
 {
@@ -609,6 +613,196 @@ Entire up-to-date order book snapshot with **all individual orders** pushed imme
   ]
 }
 ```
+
+### `open`
+
+Pushed real-time for every new order added to the limit order book (decoded from the `bids` and `asks` accounts).
+
+- no `open` messages are pushed for order that are filled or cancelled immediately (ImmediateOrCancel orders for example)
+
+```ts
+{
+  "type": "open",
+  "market": string,
+  "timestamp": string,
+  "slot": number,
+  "version": number,
+  "orderId": string,
+  "clientId": string,
+  "side": "buy" | "sell",
+  "price": string,
+  "size": string,
+  "account": string,
+  "accountSlot": number,
+  "feeTier": number
+}
+```
+
+#### sample `open` message
+
+```json
+{
+  "type": "open",
+  "market": "BTC/USDC",
+  "timestamp": "2021-03-24T10:14:33.967Z",
+  "slot": 70563387,
+  "version": 3,
+  "orderId": "10395754856459386361922812",
+  "clientId": "1616580865182472471",
+  "side": "sell",
+  "price": "56355.5",
+  "size": "7.5000",
+  "account": "6Yqus2UYf1wSaKBE4GSLeE2Ge225THeyPcgWBaoGzx3e",
+  "accountSlot": 6,
+  "feeTier": 6
+}
+```
+
+<br/>
+
+### `change`
+
+Pushed real-time anytime order size changes as a result of self-trade prevention (decoded from the `bids` and `asks` accounts).
+
+- `size` field contains updated order size
+
+```ts
+{
+  "type": "change",
+  "market": string,
+  "timestamp": string,
+  "slot": number,
+  "version": number,
+  "orderId": string,
+  "clientId": string,
+  "side": "buy" | "sell",
+  "price": string,
+  "size": string,
+  "account": string,
+  "accountSlot": number,
+  "feeTier": number
+}
+```
+
+#### sample `change` message
+
+```json
+{
+  "type": "change",
+  "market": "BTC/USDC",
+  "timestamp": "2021-03-24T10:25:21.739Z",
+  "slot": 70564525,
+  "version": 3,
+  "orderId": "10352165200213210691454558",
+  "clientId": "15125925100673159264",
+  "side": "sell",
+  "price": "56119.2",
+  "size": "8.4494",
+  "account": "EXkXcPkqFwqJPXpJdTHMdvmLE282PRShqwMTteWcfz85",
+  "accountSlot": 6,
+  "feeTier": 3
+}
+```
+
+<br/>
+
+### `fill`
+
+Pushed real-time anytime trade happens(decoded from the `eventQueue` accounts).
+
+- there are always two `fill` messages for a trade/match, one for a maker and one for a taker order
+
+- `feeCost` is provided in a quote currency
+
+```ts
+{
+  "type": "fill",
+  "market": string,
+  "timestamp": string,
+  "slot": number,
+  "version": number,
+  "orderId": string,
+  "clientId": string,
+  "side": "buy" | "sell",
+  "price": string,
+  "size": string,
+  "maker" boolean,
+  "feeCost" number,
+  "account": string,
+  "accountSlot": number,
+  "feeTier": number
+}
+```
+
+#### sample `fill` message
+
+```json
+{
+  "type": "fill",
+  "market": "BTC/USDC",
+  "timestamp": "2021-03-24T11:27:21.739Z",
+  "slot": 70564527,
+  "version": 3,
+  "orderId": "1035216520046710691454558",
+  "clientId": "151259251006473159264",
+  "side": "sell",
+  "price": "56119.2",
+  "size": "8.4494",
+  "maker" false,
+  "feeCost" 15.6,
+  "account": "EXkXcPkqFwqJPXpJdTHMdvmLE282PRShqwMTteWcfz85",
+  "accountSlot": 6,
+  "feeTier": 3
+}
+```
+
+<br/>
+
+### `done`
+
+Pushed real-time when the order is no longer on the order book (decoded from the `eventQueue` accounts).
+
+- this message can result from an order being canceled or filled (`reason` field)
+
+- there will be no more messages for this `orderId` after a `done` message
+
+- it can be pushed for orders that were never 'open' in the order book in the first place (ImmediateOrCancel orders for example)
+
+```ts
+{
+  "type": "done",
+  "market": string,
+  "timestamp": string,
+  "slot": number,
+  "version": number,
+  "orderId": string,
+  "clientId": string,
+  "side": "buy" | "sell",
+  "reason" : "canceled" | "filled",
+  "account": string,
+  "accountSlot": number
+}
+```
+
+### sample `done` message
+
+```json
+{
+  "type": "done",
+  "market": "BTC/USDC",
+  "timestamp": "2021-03-24T10:25:30.091Z",
+  "slot": 70564539,
+  "version": 3,
+  "orderId": "10366018705012566564718169",
+  "clientId": "1616581504702049718",
+  "side": "sell",
+  "reason": "canceled",
+  "account": "6Yqus2UYf1wSaKBE4GSLeE2Ge225THeyPcgWBaoGzx3e",
+  "accountSlot": 9
+}
+```
+
+###
 
 <br/>
 <br/>
@@ -647,7 +841,7 @@ Returns Serum DEX markets list supported by serum-vial instance (it can be updat
 }[]
 ```
 
-#### Sample response
+#### sample response
 
 ```json
 [

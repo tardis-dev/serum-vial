@@ -62,18 +62,10 @@ export interface Trade extends DataMessage {
   readonly id: string
 }
 
-export interface Fill extends DataMessage {
+export interface Fill extends DataMessage, OrderItem {
   readonly type: 'fill'
-  readonly price: string
-  readonly size: string
-  readonly side: 'buy' | 'sell'
   readonly maker: boolean
   readonly feeCost: number
-  readonly orderId: string
-  readonly clientId: string
-  readonly account: string
-  readonly accountSlot: number
-  readonly feeTier: number
 }
 
 export type OrderItem = {
@@ -101,15 +93,8 @@ export interface Done extends DataMessage {
   readonly accountSlot: number
 }
 
-export interface Change extends DataMessage {
+export interface Change extends DataMessage, OrderItem {
   readonly type: 'change'
-  readonly size: string
-  readonly side: 'buy' | 'sell'
-  readonly orderId: string
-  readonly clientId: string
-  readonly account: string
-  readonly accountSlot: number
-  readonly feeTier: number
 }
 
 export interface L3Snapshot extends DataMessage {
