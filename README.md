@@ -752,8 +752,8 @@ Pushed real-time anytime trade happens (decoded from the `eventQueue` accounts).
   "side": "sell",
   "price": "56119.2",
   "size": "8.4494",
-  "maker" false,
-  "feeCost" 15.6,
+  "maker": false,
+  "feeCost": 15.6,
   "account": "EXkXcPkqFwqJPXpJdTHMdvmLE282PRShqwMTteWcfz85",
   "accountSlot": 6,
   "feeTier": 3
