@@ -168,11 +168,7 @@ Serum-vial supports [SSL/TLS](https://en.wikipedia.org/wiki/Transport_Layer_Secu
 
 WebSocket API provides real-time market data feeds of Serum DEX and uses a bidirectional protocol which encodes all messages as JSON objects.
 
-Every message has a `type` field that is determining it's data type so it can be handled appropriately.
-
 Each WebSocket client is required to actively send native WebSocket [pings](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#pings_and_pongs_the_heartbeat_of_websockets) to the server with interval less than 30 seconds, otherwise connection may be dropped due to inactivity.
-
-All messages timestamps are returned in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, for example: `"2021-03-23T17:03:03.994Z"`.
 
 <br/>
 
@@ -281,8 +277,6 @@ Error message is returned for invalid subscribe/unsubscribe messages - no existi
 
 ### Available channels & corresponding message types
 
-TODO: Subscribing to channel results in providing messages with various types
-
 - `trades`
 
   - `recent_trades`
@@ -319,9 +313,19 @@ TODO: Subscribing to channel results in providing messages with various types
 
 ### Data messages
 
+- `type` is determining message's data type so it can be handled appropriately
+- `timestamp` when message has been received from node RPC API in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, for example: `"2021-03-23T17:03:03.994Z"`
+- `slot` is a [Solana's slot](https://docs.solana.com/terminology#slot) number for which message has produced
+- `version` of Serum DEX program layout (DEX version)
+- `account` is an open orders account address
+- `accountSlot` is a an open orders account slot number
+- `price` and `size` are provided as strings to preserve precision
+
+<br/>
+
 #### `recent_trades`
 
-TODO: returned from oldest to newest
+Recent trades (up to 100) ordered by timestamp in ascending order (from oldest to newest) returned immediately after successful subscription, every trade has the same format as `trade` message.
 
 ```ts
 {
@@ -334,12 +338,59 @@ TODO: returned from oldest to newest
 
 #### Sample `recent_trades` message
 
+```json
+{
+  "type": "recent_trades",
+  "market": "BTC/USDC",
+  "timestamp": "2021-03-24T07:05:27.377Z",
+  "trades": [
+    {
+      "type": "trade",
+      "market": "BTC/USDC",
+      "timestamp": "2021-03-23T19:03:06.723Z",
+      "slot": 70468384,
+      "version": 3,
+      "id": "10239824528804319520203515|3.0821|1616526186723",
+      "side": "buy",
+      "price": "55447.7",
+      "size": "3.0821"
+    }
+  ]
+}
+```
+
 <br/>
 
 #### `trade`
 
 ```ts
+{
+  "type": "trade",
+  "market": string,
+  "timestamp": string,
+  "slot": number,
+  "version": number,
+  "id": string,
+  "side": "buy" | "sell",
+  "price": string,
+  "size": string
+}
+```
 
+#### Sample `trade` message
+
+```
+{
+  "type": "trade",
+  "market": "BTC/USDC",
+  "timestamp": "2021-03-23T19:03:06.723Z",
+  "slot": 70468384,
+  "version": 3,
+  "id": "10239824528804319520203515|3.0821|1616526186723",
+  "side": "buy",
+  "price": "55447.7",
+  "size": "3.0821"
+}
 ```
 
 <br/>
