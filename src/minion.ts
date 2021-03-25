@@ -98,7 +98,7 @@ class Minion {
         compression: SHARED_COMPRESSOR,
         maxPayloadLength: 256 * 1024,
         idleTimeout: 5 * 60, // closes WS connection if no message/ping send/received in 5 minutes
-        maxBackpressure: 4 * 1024, // close if client is too slow to read the data fast enough
+        maxBackpressure: 1024 * 1024, // close if client is too slow to read the data fast enough
         message: (ws, message) => {
           this._handleSubscriptionRequest(ws, message)
         }
