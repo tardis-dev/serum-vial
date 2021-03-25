@@ -136,7 +136,12 @@ export class DataMapper {
     }
 
     if (this._options.validateL3Diffs && this._initialized && l3Diff.length > 0) {
-      this._validateL3DiffCorrectness(l3Diff)
+      const invalid = this._validateL3DiffCorrectness(l3Diff)
+
+      if (invalid) {
+        this.reset()
+        return
+      }
     }
 
     // initialize only when we have both asks and bids accounts data
@@ -362,7 +367,7 @@ export class DataMapper {
     if (this._localAsksOrders === undefined && this._localBidsOrders === undefined) {
       this._localAsksOrders = this._asksAccountOrders
       this._localBidsOrders = this._bidsAccountOrders
-      return
+      return false
     }
 
     for (const item of l3Diff) {
@@ -410,7 +415,7 @@ export class DataMapper {
         localBidsOrders: this._localBidsOrders
       })
 
-      return
+      return true
     }
 
     for (let bid of this._bidsAccountOrders!) {
@@ -427,7 +432,7 @@ export class DataMapper {
           bid,
           matchingLocalBid
         })
-        return
+        return true
       }
     }
 
@@ -437,7 +442,7 @@ export class DataMapper {
         asksAccountOrders: this._asksAccountOrders,
         localAsksOrders: this._localAsksOrders
       })
-      return
+      return true
     }
 
     for (let ask of this._asksAccountOrders!) {
@@ -454,9 +459,11 @@ export class DataMapper {
           ask,
           matchingLocalAsk
         })
-        return
+        return true
       }
     }
+
+    return false
   }
 
   // based on https://github.com/project-serum/serum-ts/blob/525786435d6893c1cc6a670b39a0ba575dd9cca6/packages/serum/src/market.ts#L1389
