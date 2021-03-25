@@ -263,8 +263,6 @@ class Minion {
         for (const market of request.markets) {
           const topic = `${type}/${market}`
           if (request.op === 'subscribe') {
-            ws.subscribe(topic)
-
             if (type === 'recent_trades') {
               const recentTrades = this._recentTradesSerialized[market]
               if (recentTrades !== undefined) {
@@ -303,6 +301,8 @@ class Minion {
                 await this._send(ws, l3Snapshot)
               }
             }
+
+            ws.subscribe(topic)
           } else {
             ws.unsubscribe(topic)
           }
@@ -324,13 +324,17 @@ class Minion {
   }
 
   private async _send(ws: WebSocket, message: any) {
-    const success = ws.send(message)
-    // handle backpressure in case of slow clients
-    if (!success) {
-      while (ws.getBufferedAmount() > 0) {
-        await wait(5)
+    let elapsed = 0
+    while (ws.getBufferedAmount() > 0) {
+      await wait(5)
+      elapsed += 5
+
+      if (elapsed > 500) {
+        ws.end(1008, 'Too much backpressure')
       }
     }
+
+    ws.send(message)
   }
 
   private _validateRequestPayload(message: Buffer) {
