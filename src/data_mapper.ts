@@ -136,9 +136,12 @@ export class DataMapper {
     }
 
     if (this._options.validateL3Diffs && this._initialized && l3Diff.length > 0) {
-      const invalid = this._validateL3DiffCorrectness(l3Diff)
+      const diffIsValid = this._validateL3DiffCorrectness(l3Diff)
 
-      if (invalid) {
+      if (diffIsValid === false) {
+        logger.log('warn', 'Resetting data mapper state due to invalid l3diff', {
+          market: this._options.symbol
+        })
         this.reset()
         return
       }
@@ -367,7 +370,7 @@ export class DataMapper {
     if (this._localAsksOrders === undefined && this._localBidsOrders === undefined) {
       this._localAsksOrders = this._asksAccountOrders
       this._localBidsOrders = this._bidsAccountOrders
-      return false
+      return true
     }
 
     for (const item of l3Diff) {
@@ -415,7 +418,7 @@ export class DataMapper {
         localBidsOrders: this._localBidsOrders
       })
 
-      return true
+      return false
     }
 
     for (let bid of this._bidsAccountOrders!) {
@@ -432,7 +435,7 @@ export class DataMapper {
           bid,
           matchingLocalBid
         })
-        return true
+        return false
       }
     }
 
@@ -442,7 +445,8 @@ export class DataMapper {
         asksAccountOrders: this._asksAccountOrders,
         localAsksOrders: this._localAsksOrders
       })
-      return true
+
+      return false
     }
 
     for (let ask of this._asksAccountOrders!) {
@@ -459,11 +463,11 @@ export class DataMapper {
           ask,
           matchingLocalAsk
         })
-        return true
+        return false
       }
     }
 
-    return false
+    return true
   }
 
   // based on https://github.com/project-serum/serum-ts/blob/525786435d6893c1cc6a670b39a0ba575dd9cca6/packages/serum/src/market.ts#L1389
