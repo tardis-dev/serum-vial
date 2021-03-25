@@ -17,7 +17,8 @@ import {
   getDidYouMean,
   minionReadyChannel,
   serumDataChannel,
-  serumMarketsChannel
+  serumMarketsChannel,
+  wait
 } from './helpers'
 import { logger } from './logger'
 import { MessageEnvelope } from './serum_producer'
@@ -207,7 +208,7 @@ class Minion {
     }
   }
 
-  private _handleSubscriptionRequest(ws: WebSocket, buffer: ArrayBuffer) {
+  private async _handleSubscriptionRequest(ws: WebSocket, buffer: ArrayBuffer) {
     try {
       if (this._wsMessagesRateLimit(ws)) {
         const message = `Too many requests, slow down. Current limit: ${this.MAX_MESSAGES_PER_SECOND} messages per second.`
@@ -219,10 +220,11 @@ class Minion {
           timestamp: new Date().toISOString()
         }
 
-        ws.send(JSON.stringify(errorMessage))
+        await this._send(ws, JSON.stringify(errorMessage))
 
         return
       }
+
       const message = Buffer.from(buffer)
       const validationResult = this._validateRequestPayload(message)
 
@@ -238,7 +240,7 @@ class Minion {
           timestamp: new Date().toISOString()
         }
 
-        ws.send(JSON.stringify(errorMessage))
+        await this._send(ws, JSON.stringify(errorMessage))
 
         return
       }
@@ -252,7 +254,7 @@ class Minion {
         timestamp: new Date().toISOString()
       }
 
-      ws.send(JSON.stringify(confirmationMessage))
+      await this._send(ws, JSON.stringify(confirmationMessage))
 
       // 'unpack' channel to specific message types that will be published for it
       const requestedTypes = MESSAGE_TYPES_PER_CHANNEL[request.channel]
@@ -266,7 +268,7 @@ class Minion {
             if (type === 'recent_trades') {
               const recentTrades = this._recentTradesSerialized[market]
               if (recentTrades !== undefined) {
-                ws.send(recentTrades)
+                await this._send(ws, recentTrades)
               } else {
                 const emptyRecentTradesMessage: RecentTrades = {
                   type: 'recent_trades',
@@ -275,7 +277,7 @@ class Minion {
                   trades: []
                 }
 
-                ws.send(JSON.stringify(emptyRecentTradesMessage))
+                await this._send(ws, JSON.stringify(emptyRecentTradesMessage))
               }
             }
 
@@ -283,7 +285,7 @@ class Minion {
               const quote = this._quotesSerialized[market]
 
               if (quote !== undefined) {
-                ws.send(quote)
+                await this._send(ws, quote)
               }
             }
 
@@ -291,14 +293,14 @@ class Minion {
               const l2Snapshot = this._l2SnapshotsSerialized[market]
 
               if (l2Snapshot !== undefined) {
-                ws.send(l2Snapshot)
+                await this._send(ws, l2Snapshot)
               }
             }
 
             if (type === 'l3snapshot') {
               const l3Snapshot = this._l3SnapshotsSerialized[market]
               if (l3Snapshot !== undefined) {
-                ws.send(l3Snapshot)
+                await this._send(ws, l3Snapshot)
               }
             }
           } else {
@@ -318,6 +320,16 @@ class Minion {
       try {
         ws.end(1011, message)
       } catch {}
+    }
+  }
+
+  private async _send(ws: WebSocket, message: any) {
+    const success = ws.send(message)
+    // handle backpressure in case of slow clients
+    if (!success) {
+      while (ws.getBufferedAmount() > 0) {
+        await wait(5)
+      }
     }
   }
 
