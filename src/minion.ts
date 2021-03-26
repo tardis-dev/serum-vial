@@ -220,7 +220,7 @@ class Minion {
           timestamp: new Date().toISOString()
         }
 
-        await this._send(ws, JSON.stringify(errorMessage))
+        await this._send(ws, () => JSON.stringify(errorMessage))
 
         return
       }
@@ -240,7 +240,7 @@ class Minion {
           timestamp: new Date().toISOString()
         }
 
-        await this._send(ws, JSON.stringify(errorMessage))
+        await this._send(ws, () => JSON.stringify(errorMessage))
 
         return
       }
@@ -254,7 +254,7 @@ class Minion {
         timestamp: new Date().toISOString()
       }
 
-      await this._send(ws, JSON.stringify(confirmationMessage))
+      await this._send(ws, () => JSON.stringify(confirmationMessage))
 
       // 'unpack' channel to specific message types that will be published for it
       const requestedTypes = MESSAGE_TYPES_PER_CHANNEL[request.channel]
@@ -266,7 +266,7 @@ class Minion {
             if (type === 'recent_trades') {
               const recentTrades = this._recentTradesSerialized[market]
               if (recentTrades !== undefined) {
-                await this._send(ws, recentTrades)
+                await this._send(ws, () => this._recentTradesSerialized[market])
               } else {
                 const emptyRecentTradesMessage: RecentTrades = {
                   type: 'recent_trades',
@@ -275,31 +275,20 @@ class Minion {
                   trades: []
                 }
 
-                await this._send(ws, JSON.stringify(emptyRecentTradesMessage))
+                await this._send(ws, () => JSON.stringify(emptyRecentTradesMessage))
               }
             }
 
             if (type === 'quote') {
-              const quote = this._quotesSerialized[market]
-
-              if (quote !== undefined) {
-                await this._send(ws, quote)
-              }
+              await this._send(ws, () => this._quotesSerialized[market])
             }
 
             if (type == 'l2snapshot') {
-              const l2Snapshot = this._l2SnapshotsSerialized[market]
-
-              if (l2Snapshot !== undefined) {
-                await this._send(ws, l2Snapshot)
-              }
+              await this._send(ws, () => this._l2SnapshotsSerialized[market])
             }
 
             if (type === 'l3snapshot') {
-              const l3Snapshot = this._l3SnapshotsSerialized[market]
-              if (l3Snapshot !== undefined) {
-                await this._send(ws, l3Snapshot)
-              }
+              await this._send(ws, () => this._l3SnapshotsSerialized[market])
             }
 
             ws.subscribe(topic)
@@ -315,26 +304,30 @@ class Minion {
       })
     } catch (err) {
       const message = 'Subscription request internal error'
+      const errorMessage = typeof err === 'string' ? err : `${err.message}, ${err.stack}`
 
-      logger.log('info', `${message} , ${err.message} ${err.stack}`, meta)
+      logger.log('info', `${message}, ${errorMessage}`, meta)
       try {
         ws.end(1011, message)
       } catch {}
     }
   }
 
-  private async _send(ws: WebSocket, message: any) {
-    let elapsed = 0
+  private async _send(ws: WebSocket, getMessage: () => string | undefined) {
+    let retries = 0
     while (ws.getBufferedAmount() > 0) {
-      await wait(5)
-      elapsed += 5
+      await wait(2)
+      retries += 1
 
-      if (elapsed > 500) {
+      if (retries > 300) {
         ws.end(1008, 'Too much backpressure')
       }
     }
 
-    ws.send(message)
+    const message = getMessage()
+    if (message !== undefined) {
+      ws.send(message)
+    }
   }
 
   private _validateRequestPayload(message: Buffer) {
