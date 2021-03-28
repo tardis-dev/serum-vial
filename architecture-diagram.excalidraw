@@ -65,8 +65,8 @@
     },
     {
       "type": "text",
-      "version": 795,
-      "versionNonce": 1317765449,
+      "version": 839,
+      "versionNonce": 197915524,
       "isDeleted": false,
       "id": "9sFL19mpRiGQuJDhuwGzf",
       "fillStyle": "hachure",
@@ -79,7 +79,7 @@
       "y": 1164.5,
       "strokeColor": "#000000",
       "backgroundColor": "transparent",
-      "width": 609,
+      "width": 551,
       "height": 192,
       "seed": 1842527775,
       "groupIds": [],
@@ -87,7 +87,7 @@
       "boundElementIds": [],
       "fontSize": 20,
       "fontFamily": 3,
-      "text": "WS Real-time market data channels \n& corresponding message types\n\n* trades - recent_trades, trade\n* level1 - recent_trades, trade, quote\n* level2 - l2snapshot,l2update, recent_trades, trade\n* level3 - l3snapshot, open, change, fill, done\n",
+      "text": "WS Real-time market data channels \n& corresponding message types\n\n* trades - recent_trades, trade\n* level1 - quote\n* level2 - l2snapshot,l2update\n* level3 - l3snapshot, open, change, fill, done\n",
       "baseline": 187,
       "textAlign": "left",
       "verticalAlign": "top"

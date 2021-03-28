@@ -104,12 +104,7 @@ describe('serum-vial', () => {
           expect(message.type).toEqual('subscribed')
         }
 
-        const firstDataMessage = l1MessagesCount === 1
-        if (firstDataMessage) {
-          expect(message.type).toEqual('recent_trades')
-        }
-
-        const secondDataMessage = l1MessagesCount === 2
+        const secondDataMessage = l1MessagesCount === 1
         if (secondDataMessage) {
           expect(message.type).toEqual('quote')
         }
@@ -149,11 +144,6 @@ describe('serum-vial', () => {
         const firstDataMessage = l2MessagesCount === 1
         if (firstDataMessage) {
           expect(message.type).toEqual('l2snapshot')
-        }
-
-        const secondDataMessage = l2MessagesCount === 2
-        if (secondDataMessage) {
-          expect(message.type).toEqual('recent_trades')
         }
 
         l2MessagesCount++

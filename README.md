@@ -9,15 +9,15 @@
 
 ## Why?
 
-We all know that Serum DEX is awesome, but since it's a new ecosystem, some tooling around it may not be so convenient especially from centralized exchanges APIs users perspective. Serum-vial which is a real-time WebSocket market data API server for Serum DEX hopes to alleviate some of those issues by offering:
+We all know that Serum DEX is awesome, but since it's a new ecosystem, tooling around it may not be so convenient especially from centralized exchanges APIs users perspective. Serum-vial which is a real-time WebSocket market data API server for Serum DEX hopes to alleviate some of those issues by offering:
 
 - **familiar experience for centralized exchanges APIs users**
 
   - **WebSocket API with Pub/Sub flow** - subscribe to selected channels and markets and receive real-time data as easy to parse JSON messages that can be consumed from any language supporting WebSocket protocol
 
-  - **incremental L2 order book updates** - instead of decoding Serum market `asks` and `bids` accounts for each account change in order to detect order book changes, receive [initial L2 snapshot](#l2snapshot) and [incremental updates](#l2update) as JSON messages real-time over WebSocket connection
+  - **incremental L2 order book updates** - instead of decoding Serum market `asks` and `bids` accounts for each account change in order to detect order book updates, receive [initial L2 snapshot](#l2snapshot) and [incremental updates](#l2update) as JSON messages real-time over WebSocket connection
 
-  - **tick-by-tick trades** - instead of decoding `eventQueue` account data which can be large (>1MB) and in practice it's hard to consume real-time directly from Solana RPC node due to it's size, receive individual [`trade`](#trade) messages real-time over WebSocket connection
+  - **tick-by-tick trades** - instead of decoding `eventQueue` account data which is quite large (> 1MB) and in practice it's hard to consume real-time directly from Solana RPC node due to it's size, receive individual [`trade`](#trade) messages real-time over WebSocket connection
 
   - **real-time L3 data** - receive the most granular updates on individual order level: [`open`](#open), [`change`](#change), [`fill`](#fill) and [`done`](#done) messages for every order that Serum DEX processes
 
@@ -293,16 +293,12 @@ When subscribed to the channel, server will push the data messages as specified 
 
 - `level1`
 
-  - [`recent_trades`](#recent_trades)
-  - [`trade`](#trade)
   - [`quote`](#quote)
 
 - `level2`
 
   - [`l2snapshot`](#l2snapshot)
   - [`l2update`](#l2update)
-  - [`recent_trades`](#recent_trades)
-  - [`trade`](#trade)
 
 - `level3`
 
@@ -870,7 +866,7 @@ Returns Serum DEX markets list supported by serum-vial instance (it can be updat
 
 ## Architecture
 
-![architecture diagram](https://user-images.githubusercontent.com/51779538/112196249-20567d00-8c0b-11eb-86c9-409c1de75c41.png)
+![architecture diagram](https://user-images.githubusercontent.com/51779538/112750634-f4037d80-8fc9-11eb-8ce3-a0798b6790e8.png)
 
 <br/>
 <br/>
