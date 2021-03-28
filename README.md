@@ -1,9 +1,10 @@
 <img src="https://raw.githubusercontent.com/tardis-dev/serum-vial/master/logo.svg">
 
-# serum-vial: real-time WS market data API for Serum DEX
 
 [![Version](https://img.shields.io/npm/v/serum-vial.svg?color=05aac5)](https://www.npmjs.org/package/serum-vial)
 [![Docker version](https://img.shields.io/docker/v/tardisdev/serum-vial/latest?label=Docker&color=05aac5)](https://hub.docker.com/r/tardisdev/serum-vial)
+
+# serum-vial: real-time WS market data API for Serum DEX
 
 <br/>
 
