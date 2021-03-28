@@ -197,7 +197,7 @@ const ws = new WebSocket('ws://localhost:8000/v1/ws')
 ws.onopen = () => {
   const subscribeL2 = {
     op: 'subscribe',
-    channel: 'level2',
+    channel: 'trades',
     markets: ['BTC/USDC']
   }
 
