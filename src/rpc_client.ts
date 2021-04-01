@@ -480,7 +480,7 @@ class AccountsChangeNotifications {
   private _sendMessage(ws: WebSocket, message: any) {
     ws.send(JSON.stringify(message), (err) => {
       if (err !== undefined) {
-        logger.log('warning', `WS send error: ${err.message}`)
+        logger.log('warn', `WS send error: ${err.message}`)
         ws.terminate()
       }
     })
