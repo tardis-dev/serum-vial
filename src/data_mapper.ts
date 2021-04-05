@@ -140,7 +140,11 @@ export class DataMapper {
 
       if (diffIsValid === false) {
         logger.log('warn', 'Resetting data mapper state due to invalid l3diff', {
-          market: this._options.symbol
+          market: this._options.symbol,
+          asksAccountExists: accountsData.asks !== undefined,
+          bidsAccountExists: accountsData.bids !== undefined,
+          eventQueueAccountExists: accountsData.eventQueue !== undefined,
+          slot
         })
         this.reset()
         return
