@@ -99,10 +99,11 @@ class Minion {
         maxPayloadLength: 256 * 1024,
         idleTimeout: 5 * 60, // closes WS connection if no message/ping send/received in 5 minutes
         maxBackpressure: 1024 * 1024, // close if client is too slow to read the data fast enough
-        message: (ws, message) => {
+        closeOnBackpressureLimit: true,
+        message: (ws: any, message: any) => {
           this._handleSubscriptionRequest(ws, message)
         }
-      })
+      } as any)
 
       .get(`${apiPrefix}/markets`, this._listMarkets)
   }
