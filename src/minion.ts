@@ -1,14 +1,6 @@
 import { getLayoutVersion, Market } from '@project-serum/serum'
 import { Connection, PublicKey } from '@solana/web3.js'
-import {
-  App,
-  HttpResponse,
-  SHARED_COMPRESSOR,
-  SSLApp,
-  TemplatedApp,
-  us_listen_socket_close,
-  WebSocket
-} from 'uWebSockets.js'
+import { App, HttpResponse, DISABLED, SSLApp, TemplatedApp, us_listen_socket_close, WebSocket } from 'uWebSockets.js'
 import { isMainThread, threadId, workerData } from 'worker_threads'
 import { CHANNELS, MESSAGE_TYPES_PER_CHANNEL, OPS } from './consts'
 import {
@@ -95,10 +87,10 @@ class Minion {
       : {}
     return WsApp(options)
       .ws(`${apiPrefix}/ws`, {
-        compression: SHARED_COMPRESSOR,
+        compression: DISABLED,
         maxPayloadLength: 256 * 1024,
-        idleTimeout: 5 * 60, // closes WS connection if no message/ping send/received in 5 minutes
-        maxBackpressure: 1024 * 1024, // close if client is too slow to read the data fast enough
+        idleTimeout: 60, // closes WS connection if no message/ping send/received in 1 minute
+        maxBackpressure: 512 * 1024, // close if client is too slow to read the data fast enough
         closeOnBackpressureLimit: true,
         message: (ws: any, message: any) => {
           this._handleSubscriptionRequest(ws, message)

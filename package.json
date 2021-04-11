@@ -48,7 +48,7 @@
     "didyoumean2": "^4.1.0",
     "is-docker": "^2.2.0",
     "node-fetch": "^2.6.1",
-    "uWebSockets.js": "git+https://git@github.com/uNetworking/uWebSockets.js.git#binaries",
+    "uWebSockets.js": "git+https://git@github.com/uNetworking/uWebSockets.js.git#v19.0.0",
     "winston": "^3.3.3",
     "ws": "^7.4.4",
     "yargs": "^16.2.0"
