@@ -36,6 +36,7 @@ export class DataMapper {
 
   private _initialized = false
   private _lastSeenSeqNum: number | undefined = undefined
+  private _lastL3DiffWasInvalid = false
 
   private _currentL2Snapshot:
     | {
@@ -138,17 +139,24 @@ export class DataMapper {
     if (this._options.validateL3Diffs && this._initialized && l3Diff.length > 0) {
       const diffIsValid = this._validateL3DiffCorrectness(l3Diff)
 
-      if (diffIsValid === false) {
+      if (diffIsValid === false && this._lastL3DiffWasInvalid) {
         logger.log('warn', 'Resetting data mapper state due to invalid l3diff', {
           market: this._options.symbol,
           asksAccountExists: accountsData.asks !== undefined,
           bidsAccountExists: accountsData.bids !== undefined,
           eventQueueAccountExists: accountsData.eventQueue !== undefined,
-          slot
+          slot,
+          l3Diff,
+          bidsAccountOrders: this._bidsAccountOrders,
+          localBidsOrders: this._localBidsOrders,
+          asksAccountOrders: this._asksAccountOrders,
+          localAsksOrders: this._localAsksOrders
         })
         this.reset()
         return
       }
+
+      this._lastL3DiffWasInvalid = diffIsValid === false
     }
 
     // initialize only when we have both asks and bids accounts data
@@ -366,6 +374,7 @@ export class DataMapper {
     this._localAsksOrders = undefined
     this._currentL2Snapshot = undefined
     this._currentQuote = undefined
+    this._lastL3DiffWasInvalid = false
   }
 
   private _validateL3DiffCorrectness(l3Diff: (Open | Fill | Done | Change)[]) {
@@ -416,12 +425,6 @@ export class DataMapper {
     }
 
     if (this._bidsAccountOrders!.length !== this._localBidsOrders!.length) {
-      logger.log('error', 'Invalid bids diff', {
-        l3Diff,
-        bidsAccountOrders: this._bidsAccountOrders,
-        localBidsOrders: this._localBidsOrders
-      })
-
       return false
     }
 
@@ -432,24 +435,11 @@ export class DataMapper {
         matchingLocalBid.price !== bid.price ||
         matchingLocalBid.size !== bid.size
       ) {
-        logger.log('error', 'Invalid bids diff', {
-          l3Diff,
-          bidsAccountOrders: this._bidsAccountOrders,
-          localBidsOrders: this._localBidsOrders,
-          bid,
-          matchingLocalBid
-        })
         return false
       }
     }
 
     if (this._asksAccountOrders!.length !== this._localAsksOrders!.length) {
-      logger.log('error', 'Invalid asks diff', {
-        l3Diff,
-        asksAccountOrders: this._asksAccountOrders,
-        localAsksOrders: this._localAsksOrders
-      })
-
       return false
     }
 
@@ -460,13 +450,6 @@ export class DataMapper {
         matchingLocalAsk.price !== ask.price ||
         matchingLocalAsk.size !== ask.size
       ) {
-        logger.log('error', 'Invalid asks diff', {
-          l3Diff,
-          asksAccountOrders: this._asksAccountOrders,
-          localAsksOrders: this._localAsksOrders,
-          ask,
-          matchingLocalAsk
-        })
         return false
       }
     }
