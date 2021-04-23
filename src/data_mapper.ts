@@ -36,7 +36,7 @@ export class DataMapper {
 
   private _initialized = false
   private _lastSeenSeqNum: number | undefined = undefined
-  private _lastL3DiffWasInvalid = false
+  private _invalidSubsequentL3DiffsCount = 0
 
   private _currentL2Snapshot:
     | {
@@ -139,7 +139,7 @@ export class DataMapper {
     if (this._options.validateL3Diffs && this._initialized && l3Diff.length > 0) {
       const diffIsValid = this._validateL3DiffCorrectness(l3Diff)
 
-      if (diffIsValid === false && this._lastL3DiffWasInvalid) {
+      if (diffIsValid === false && this._invalidSubsequentL3DiffsCount >= 2) {
         logger.log('warn', 'Resetting data mapper state due to invalid l3diff', {
           market: this._options.symbol,
           asksAccountExists: accountsData.asks !== undefined,
@@ -150,8 +150,11 @@ export class DataMapper {
         this.reset()
         return
       }
-
-      this._lastL3DiffWasInvalid = diffIsValid === false
+      if (diffIsValid == false) {
+        this._invalidSubsequentL3DiffsCount++
+      } else {
+        this._invalidSubsequentL3DiffsCount = 0
+      }
     }
 
     // initialize only when we have both asks and bids accounts data
@@ -369,7 +372,7 @@ export class DataMapper {
     this._localAsksOrders = undefined
     this._currentL2Snapshot = undefined
     this._currentQuote = undefined
-    this._lastL3DiffWasInvalid = false
+    this._invalidSubsequentL3DiffsCount = 0
   }
 
   private _validateL3DiffCorrectness(l3Diff: (Open | Fill | Done | Change)[]) {
