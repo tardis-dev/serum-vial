@@ -145,12 +145,7 @@ export class DataMapper {
           asksAccountExists: accountsData.asks !== undefined,
           bidsAccountExists: accountsData.bids !== undefined,
           eventQueueAccountExists: accountsData.eventQueue !== undefined,
-          slot,
-          l3Diff,
-          bidsAccountOrders: this._bidsAccountOrders,
-          localBidsOrders: this._localBidsOrders,
-          asksAccountOrders: this._asksAccountOrders,
-          localAsksOrders: this._localAsksOrders
+          slot
         })
         this.reset()
         return
