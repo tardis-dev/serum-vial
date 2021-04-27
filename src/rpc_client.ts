@@ -9,23 +9,37 @@ import { logger } from './logger'
 
 // simple solana RPC client
 export class RPCClient {
-  constructor(private readonly _options: { readonly nodeEndpoint: string; readonly commitment: string }) {}
+  constructor(
+    private readonly _options: {
+      readonly nodeEndpoint: string
+      readonly wsEndpointPort: number | undefined
+      readonly commitment: string
+    }
+  ) {}
 
   public async *streamAccountsNotification(market: Market, marketName: string): AsyncIterable<AccountsNotification> {
     const wsEndpoint = new URL(this._options.nodeEndpoint)
     wsEndpoint.protocol = this._options.nodeEndpoint.startsWith('https') ? 'wss' : 'ws'
+
+    if (this._options.wsEndpointPort !== undefined) {
+      wsEndpoint.port = this._options.wsEndpointPort.toString()
+    }
 
     const notificationsStream = new PassThrough({
       objectMode: true,
       highWaterMark: 8096
     })
 
-    var accountsNotifications = new AccountsChangeNotifications(market, {
+    const options = {
       nodeWsEndpoint: wsEndpoint.toString(),
       nodeRestEndpoint: this._options.nodeEndpoint,
       marketName,
       commitment: this._options.commitment
-    })
+    }
+
+    const accountsNotifications = new AccountsChangeNotifications(market, options)
+
+    logger.log('info', 'Starting RPC client', options)
 
     accountsNotifications.onAccountsChange = (notification) => {
       notificationsStream.write(notification)

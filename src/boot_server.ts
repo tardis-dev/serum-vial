@@ -8,6 +8,7 @@ import { SerumMarket } from './types'
 export async function bootServer({
   port,
   nodeEndpoint,
+  wsEndpointPort,
   validateL3Diffs,
   minionsCount,
   markets,
@@ -59,7 +60,7 @@ export async function bootServer({
 
   for (const market of markets) {
     const serumProducerWorker = new Worker(path.resolve(__dirname, 'serum_producer.js'), {
-      workerData: { marketName: market.name, nodeEndpoint, validateL3Diffs, markets, commitment }
+      workerData: { marketName: market.name, nodeEndpoint, validateL3Diffs, markets, commitment, wsEndpointPort }
     })
 
     serumProducerWorker.on('error', (err) => {
@@ -99,6 +100,7 @@ export async function stopServer() {
 type BootOptions = {
   port: number
   nodeEndpoint: string
+  wsEndpointPort: number | undefined
   validateL3Diffs: boolean
   minionsCount: number
   commitment: string

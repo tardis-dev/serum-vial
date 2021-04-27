@@ -27,6 +27,7 @@ export class SerumProducer {
   constructor(
     private readonly _options: {
       nodeEndpoint: string
+      wsEndpointPort: number | undefined
       validateL3Diffs: boolean
       marketName: string
       commitment: string
@@ -41,7 +42,11 @@ export class SerumProducer {
     const marketMeta = this._options.markets.find((m) => m.name == this._options.marketName)!
 
     // don't use Solana web3.js Connection but custom rpcClient so we have more control and insight what is going on
-    const rpcClient = new RPCClient({ nodeEndpoint: this._options.nodeEndpoint, commitment: this._options.commitment })
+    const rpcClient = new RPCClient({
+      nodeEndpoint: this._options.nodeEndpoint,
+      commitment: this._options.commitment,
+      wsEndpointPort: this._options.wsEndpointPort
+    })
 
     const market = await Market.load(
       rpcClient as any,

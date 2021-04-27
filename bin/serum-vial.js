@@ -25,6 +25,13 @@ const argv = yargs
     default: DEFAULT_NODE_ENDPOINT
   })
 
+  .option('ws-endpoint-port', {
+    type: 'number',
+    describe:
+      'Optional Solana RPC WS node endpoint port that serum-vial uses as a data source (if different than REST endpoint port)',
+    default: undefined
+  })
+
   .option('log-level', {
     type: 'string',
     describe: 'Log level',
@@ -86,6 +93,7 @@ async function start() {
   const options = {
     port,
     nodeEndpoint: argv['endpoint'],
+    wsEndpointPort: argv['ws-endpoint-port'],
     validateL3Diffs: argv['validate-l3-diffs'],
     minionsCount: argv['minions-count'],
     commitment: argv['commitment']
