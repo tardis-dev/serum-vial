@@ -12,8 +12,8 @@ export class RPCClient {
   constructor(private readonly _options: { readonly nodeEndpoint: string; readonly commitment: string }) {}
 
   public async *streamAccountsNotification(market: Market, marketName: string): AsyncIterable<AccountsNotification> {
-    const wssEndpoint = new URL(this._options.nodeEndpoint)
-    wssEndpoint.protocol = 'wss'
+    const wsEndpoint = new URL(this._options.nodeEndpoint)
+    wsEndpoint.protocol = this._options.nodeEndpoint.startsWith('https') ? 'wss' : 'ws'
 
     const notificationsStream = new PassThrough({
       objectMode: true,
@@ -21,7 +21,7 @@ export class RPCClient {
     })
 
     var accountsNotifications = new AccountsChangeNotifications(market, {
-      nodeWssEndpoint: wssEndpoint.toString(),
+      nodeWsEndpoint: wsEndpoint.toString(),
       nodeRestEndpoint: this._options.nodeEndpoint,
       marketName,
       commitment: this._options.commitment
@@ -165,7 +165,7 @@ class AccountsChangeNotifications {
   constructor(
     market: Market,
     private readonly _options: {
-      readonly nodeWssEndpoint: string
+      readonly nodeWsEndpoint: string
       readonly nodeRestEndpoint: string
       readonly marketName: string
       readonly commitment: string
@@ -201,7 +201,7 @@ class AccountsChangeNotifications {
       return
     }
 
-    const ws = new WebSocket(this._options.nodeWssEndpoint, {
+    const ws = new WebSocket(this._options.nodeWsEndpoint, {
       handshakeTimeout: 15 * 1000
     })
 
