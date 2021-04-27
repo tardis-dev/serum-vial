@@ -19,6 +19,7 @@ describe('serum-vial', () => {
       port: PORT,
       commitment: 'confirmed',
       validateL3Diffs: true,
+
       markets: [
         {
           address: 'A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw',
@@ -28,7 +29,8 @@ describe('serum-vial', () => {
         }
       ],
       minionsCount: 1,
-      nodeEndpoint: 'https://solana-api.projectserum.com'
+      nodeEndpoint: 'https://solana-api.projectserum.com',
+      wsEndpointPort: undefined
     })
   }, TIMEOUT)
 
