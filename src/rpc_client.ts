@@ -471,7 +471,7 @@ class AccountsChangeNotifications {
 
     this._pingTID = setInterval(() => {
       this._sendMessage(ws, { jsonrpc: '2.0', method: 'ping', params: null })
-    }, 5 * 1000)
+    }, 3 * 1000)
   }
 
   private _monitorConnectionIfStale(ws: WebSocket) {
@@ -481,14 +481,14 @@ class AccountsChangeNotifications {
     // set up timer that checks against open, but stale connections that do not return any data
     this._staleConnectionTID = setInterval(() => {
       if (this._receivedMessagesCount === 0) {
-        logger.log('info', `Did not received any messages within 6s timeout, terminating connection...`, {
+        logger.log('info', `Did not received any messages within 10s timeout, terminating connection...`, {
           market: this._options.marketName
         })
 
         ws.terminate()
       }
       this._receivedMessagesCount = 0
-    }, 6 * 1000)
+    }, 10 * 1000)
   }
 
   private _sendMessage(ws: WebSocket, message: any) {
