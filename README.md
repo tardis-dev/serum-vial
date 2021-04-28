@@ -121,7 +121,7 @@ npx serum-vial
 If you'd like to switch to different Solana RPC node endpoint like for example local one, change port or run with debug logs enabled, just add one of the available CLI options.
 
 ```sh
-npx serum-vial --endpoint http://localhost:8090 --ws-endpoint-port 8091 --log-level debug --port 8080
+npx serum-vial --endpoint http://localhost:8090 --ws-endpoint-port 8899 --log-level debug --port 8900
 ```
 
 Alternatively you can install serum-vial globally.
