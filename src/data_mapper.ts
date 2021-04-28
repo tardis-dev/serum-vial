@@ -139,7 +139,7 @@ export class DataMapper {
     if (this._options.validateL3Diffs && this._initialized && l3Diff.length > 0) {
       const diffIsValid = this._validateL3DiffCorrectness(l3Diff)
 
-      if (diffIsValid === false && this._invalidSubsequentL3DiffsCount >= 2) {
+      if (diffIsValid === false && this._invalidSubsequentL3DiffsCount >= 1) {
         logger.log('warn', 'Resetting data mapper state due to invalid l3diff', {
           market: this._options.symbol,
           asksAccountExists: accountsData.asks !== undefined,
