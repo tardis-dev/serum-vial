@@ -23,9 +23,6 @@ We all know that Serum DEX is awesome, but since it's a new ecosystem, tooling a
 
 - **decreased load and bandwidth consumption for Solana RPC nodes hosts** - by providing real-time market data API via serum-vial server instead of RPC node directly, hosts can decrease substantially both CPU load and bandwidth requirements as only serum-vial will be direct consumer of RPC API when it comes to market data accounts changes and will efficiently normalize and broadcast small JSON messages to all connected clients
 
-<br/>
-<br/>
-
 ## What about placing/cancelling orders endpoints?
 
 Serum-vial provides real-time market data only and does not include endpoints for placing/canceling or tracking own orders as that requires handling private keys which is currently out of scope of this project.
@@ -75,18 +72,43 @@ ws.onopen = () => {
 
 ## Demo
 
-Demo of Serum DEX UI backed by serum-vial WebSocket API for trade and order book data is available at:
+Serum-vial demo WebSocket server backed by [locally running Solana RPC node](https://docs.solana.com/running-validator) is available at:
 
-[serum-dex.tardis.dev](https://serum-dex.tardis.dev/)
+<br/>
 
-Since by default serum-vial uses [`confirmed` commitment level](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment) for getting accounts notification from RPC node, it may sometimes feel slightly lagging when it comes to order book updates vs default DEX UI which uses [`recent/processed` commitment](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment). Trade data is provided faster since by default DEX UI is pooling `eventQueue` account data on interval due to it's size (> 1MB), and serum-vial uses real-time `eventQueue` account notification as a source for trade messages which aren't delayed by pooling interval time.
+[wss://serum-vial.tardis.dev/v1/ws](wss://serum-vial.tardis.dev/v1/ws)
 
-[![See demo](https://img.shields.io/badge/-See%20Demo-c?color=05aac5)](https://serum-dex.tardis.dev/)
+<br/>
+
+Serum DEX UI backed by serum-vial demo WebSocket server for it's trade and order book data feeds is available at:
+
+<br/>
+
+[https://serum-dex.tardis.dev](https://serum-dex.tardis.dev/)
+
+<br/>
+
+Since by default serum-vial uses [`confirmed` commitment level](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment) for getting accounts notification from RPC node, it may sometimes feel slightly lagged when it comes to order book updates vs default DEX UI which uses [`recent/processed` commitment](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment).
+
+Trade data is provided faster since by default DEX UI is pooling `eventQueue` account data on interval due to it's size (> 1MB), and serum-vial uses real-time `eventQueue` account notification as a source for trade messages which aren't delayed by pooling interval time.
+
+[![See demo](https://img.shields.io/badge/-See%20Demo%20DEX%20UI-c?color=05aac5)](https://serum-dex.tardis.dev/)
 
 <br/>
 <br/>
 
 ## Installation
+
+---
+
+# IMPORTANT NOTE
+
+For the best serum-vial data reliability it's advised to [set up a dedicated Solana RPC node](https://docs.solana.com/running-validator) and connect `serum-vial` to it instead of default `https://solana-api.projectserum.com` which may rate limit or frequently restart Websocket RPC connections since it's a public node used by many.
+
+---
+
+<br/>
+<br/>
 
 ### npx <sub>(requires Node.js >= 15 and git installed on host machine)</sub>
 
@@ -96,10 +118,10 @@ Installs and starts serum-vial server running on port `8000`.
 npx serum-vial
 ```
 
-If you'd like to switch to different Solana RPC node endpoint, change port or run with debug logs enabled, just add one of the available CLI options.
+If you'd like to switch to different Solana RPC node endpoint like for example local one, change port or run with debug logs enabled, just add one of the available CLI options.
 
 ```sh
-npx serum-vial --endpoint https://solana-api.projectserum.com --log-level debug --port 8080
+npx serum-vial --endpoint http://localhost:8090 --ws-endpoint-port 8091 --log-level debug --port 8080
 ```
 
 Alternatively you can install serum-vial globally.
