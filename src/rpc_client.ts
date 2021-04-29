@@ -481,14 +481,14 @@ class AccountsChangeNotifications {
     // set up timer that checks against open, but stale connections that do not return any data
     this._staleConnectionTID = setInterval(() => {
       if (this._receivedMessagesCount === 0) {
-        logger.log('info', `Did not received any messages within 10s timeout, terminating connection...`, {
+        logger.log('info', `Did not received any messages within 60s timeout, terminating connection...`, {
           market: this._options.marketName
         })
 
         ws.terminate()
       }
       this._receivedMessagesCount = 0
-    }, 10 * 1000)
+    }, 60 * 1000)
   }
 
   private _sendMessage(ws: WebSocket, message: any) {
