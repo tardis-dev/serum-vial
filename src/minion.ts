@@ -5,6 +5,7 @@ import { isMainThread, threadId, workerData } from 'worker_threads'
 import { CHANNELS, MESSAGE_TYPES_PER_CHANNEL, OPS } from './consts'
 import {
   cleanupChannel,
+  executeAndRetry,
   getAllowedValuesText,
   getDidYouMean,
   minionReadyChannel,
@@ -132,30 +133,35 @@ class Minion {
 
     if (this._cachedListMarketsResponse === undefined) {
       const markets = await Promise.all(
-        this._markets.map(async (market) => {
-          const connection = new Connection(this._nodeEndpoint)
-          const { tickSize, minOrderSize, baseMintAddress, quoteMintAddress, programId } = await Market.load(
-            connection,
-            new PublicKey(market.address),
-            undefined,
-            new PublicKey(market.programId)
-          )
+        this._markets.map((market) => {
+          return executeAndRetry(
+            async () => {
+              const connection = new Connection(this._nodeEndpoint)
+              const { tickSize, minOrderSize, baseMintAddress, quoteMintAddress, programId } = await Market.load(
+                connection,
+                new PublicKey(market.address),
+                undefined,
+                new PublicKey(market.programId)
+              )
 
-          const [baseCurrency, quoteCurrency] = market.name.split('/')
-          const serumMarket: SerumListMarketItem = {
-            name: market.name,
-            baseCurrency: baseCurrency!,
-            quoteCurrency: quoteCurrency!,
-            version: getLayoutVersion(programId),
-            address: market.address,
-            programId: market.programId,
-            baseMintAddress: baseMintAddress.toBase58(),
-            quoteMintAddress: quoteMintAddress.toBase58(),
-            tickSize,
-            minOrderSize,
-            deprecated: market.deprecated
-          }
-          return serumMarket
+              const [baseCurrency, quoteCurrency] = market.name.split('/')
+              const serumMarket: SerumListMarketItem = {
+                name: market.name,
+                baseCurrency: baseCurrency!,
+                quoteCurrency: quoteCurrency!,
+                version: getLayoutVersion(programId),
+                address: market.address,
+                programId: market.programId,
+                baseMintAddress: baseMintAddress.toBase58(),
+                quoteMintAddress: quoteMintAddress.toBase58(),
+                tickSize,
+                minOrderSize,
+                deprecated: market.deprecated
+              }
+              return serumMarket
+            },
+            { maxRetries: 4 }
+          )
         })
       )
 
