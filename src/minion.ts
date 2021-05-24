@@ -254,6 +254,10 @@ class Minion {
         for (const market of request.markets) {
           const topic = `${type}/${market}`
           if (request.op === 'subscribe') {
+            if (ws.isSubscribed(topic)) {
+              continue
+            }
+
             if (type === 'recent_trades') {
               const recentTrades = this._recentTradesSerialized[market]
               if (recentTrades !== undefined) {
@@ -285,7 +289,6 @@ class Minion {
             const succeeded = ws.subscribe(topic)
             if (!succeeded) {
               logger.log('info', `Subscribe failure`, {
-                status,
                 topic,
                 bufferedAmount: ws.getBufferedAmount()
               })
@@ -322,10 +325,10 @@ class Minion {
   private async _send(ws: WebSocket, getMessage: () => string | undefined) {
     let retries = 0
     while (ws.getBufferedAmount() > this.MAX_BACKPRESSURE / 2) {
-      await wait(2)
+      await wait(10)
       retries += 1
 
-      if (retries > 800) {
+      if (retries > 200) {
         ws.end(1008, 'Too much backpressure')
         return
       }
