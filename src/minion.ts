@@ -247,15 +247,6 @@ class Minion {
 
       const request = validationResult.request
 
-      const confirmationMessage: SuccessResponse = {
-        type: request.op == 'subscribe' ? 'subscribed' : 'unsubscribed',
-        channel: request.channel,
-        markets: request.markets,
-        timestamp: new Date().toISOString()
-      }
-
-      await this._send(ws, () => JSON.stringify(confirmationMessage))
-
       // 'unpack' channel to specific message types that will be published for it
       const requestedTypes = MESSAGE_TYPES_PER_CHANNEL[request.channel]
 
@@ -291,12 +282,27 @@ class Minion {
               await this._send(ws, () => this._l3SnapshotsSerialized[market])
             }
 
-            ws.subscribe(topic)
+            const succeeded = ws.subscribe(topic)
+            if (!succeeded) {
+              logger.log('info', `Subscribe failure`, {
+                status,
+                topic,
+                bufferedAmount: ws.getBufferedAmount()
+              })
+            }
           } else {
             ws.unsubscribe(topic)
           }
         }
       }
+      const confirmationMessage: SuccessResponse = {
+        type: request.op == 'subscribe' ? 'subscribed' : 'unsubscribed',
+        channel: request.channel,
+        markets: request.markets,
+        timestamp: new Date().toISOString()
+      }
+
+      await this._send(ws, () => JSON.stringify(confirmationMessage))
 
       logger.log('debug', request.op == 'subscribe' ? 'Subscribe successfully' : 'Unsubscribed successfully', {
         successMessage: confirmationMessage,
@@ -331,7 +337,6 @@ class Minion {
       if (!status) {
         logger.log('info', `Send backpressure`, {
           status,
-          message,
           bufferedAmount: ws.getBufferedAmount()
         })
       }
