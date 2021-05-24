@@ -337,20 +337,7 @@ class Minion {
 
     const message = getMessage()
     if (message !== undefined) {
-      const success = ws.send(message)
-      if (!success) {
-        retries = 0
-
-        while (ws.getBufferedAmount() > 0) {
-          await wait(10)
-          retries += 1
-
-          if (retries > 200) {
-            ws.end(1008, 'Too much backpressure')
-            return
-          }
-        }
-      }
+      ws.send(message)
     }
   }
 
