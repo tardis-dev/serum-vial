@@ -149,7 +149,7 @@ describe('serum-vial', () => {
           receivedSubscribed = true
         }
 
-        if (message.type === 'l3snapshot') {
+        if (message.type === 'l2snapshot') {
           receivedSnapshot = true
         }
 
