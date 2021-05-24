@@ -171,6 +171,7 @@ class Minion {
     }
 
     if (!res.aborted) {
+      res.writeStatus('200 OK')
       res.writeHeader('content-type', 'application/json')
       res.end(this._cachedListMarketsResponse)
     }
@@ -324,7 +325,7 @@ class Minion {
 
   private async _send(ws: WebSocket, getMessage: () => string | undefined) {
     let retries = 0
-    while (ws.getBufferedAmount() > this.MAX_BACKPRESSURE / 2) {
+    while (ws.getBufferedAmount() > 0) {
       await wait(10)
       retries += 1
 
@@ -336,12 +337,18 @@ class Minion {
 
     const message = getMessage()
     if (message !== undefined) {
-      const status = ws.send(message, false)
-      if (!status) {
-        logger.log('info', `Send backpressure`, {
-          status,
-          bufferedAmount: ws.getBufferedAmount()
-        })
+      const success = ws.send(message, false)
+      if (!success) {
+        retries = 0
+        while (ws.getBufferedAmount() > 0) {
+          await wait(10)
+          retries += 1
+
+          if (retries > 200) {
+            ws.end(1008, 'Too much backpressure')
+            return
+          }
+        }
       }
     }
   }
