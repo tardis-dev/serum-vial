@@ -71,6 +71,7 @@ class Minion {
   private readonly _marketNames: string[]
   private _listenSocket: any | undefined = undefined
 
+  private MAX_BACKPRESSURE = 1024 * 1024
   constructor(private readonly _nodeEndpoint: string, private readonly _markets: SerumMarket[]) {
     this._marketNames = _markets.map((m) => m.name)
     this._server = this._initServer()
@@ -91,7 +92,7 @@ class Minion {
         compression: DISABLED,
         maxPayloadLength: 256 * 1024,
         idleTimeout: 60, // closes WS connection if no message/ping send/received in 1 minute
-        maxBackpressure: 1024 * 1024, // close if client is too slow to read the data fast enough
+        maxBackpressure: this.MAX_BACKPRESSURE, // close if client is too slow to read the data fast enough
         closeOnBackpressureLimit: true,
         message: (ws: any, message: any) => {
           this._handleSubscriptionRequest(ws, message)
@@ -314,18 +315,26 @@ class Minion {
 
   private async _send(ws: WebSocket, getMessage: () => string | undefined) {
     let retries = 0
-    while (ws.getBufferedAmount() > 0) {
-      await wait(3)
+    while (ws.getBufferedAmount() > this.MAX_BACKPRESSURE / 2) {
+      await wait(2)
       retries += 1
 
-      if (retries > 600) {
+      if (retries > 800) {
         ws.end(1008, 'Too much backpressure')
+        return
       }
     }
 
     const message = getMessage()
     if (message !== undefined) {
-      ws.send(message, false)
+      const status = ws.send(message, false)
+      if (!status) {
+        logger.log('info', `Send backpressure`, {
+          status,
+          message,
+          bufferedAmount: ws.getBufferedAmount()
+        })
+      }
     }
   }
 
