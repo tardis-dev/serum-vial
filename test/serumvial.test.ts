@@ -60,18 +60,19 @@ describe('serum-vial', () => {
         markets: markets.map((m) => m.name)
       }
 
+      let receivedSubscribed = false
+      let receivedRecentTrades = false
+
       await wsClient.send(subscribeRequest)
       let messagesCount = 0
 
       for await (const message of wsClient.stream()) {
-        const isFirstMessage = messagesCount === 0
-        if (isFirstMessage) {
-          expect(message.type).toEqual('subscribed')
+        if (message.type === 'subscribed') {
+          receivedSubscribed = true
         }
 
-        const firstDataMessage = messagesCount === 1
-        if (firstDataMessage) {
-          expect(message.type).toEqual('recent_trades')
+        if (message.type === 'recent_trades') {
+          receivedRecentTrades = true
         }
 
         messagesCount++
@@ -81,6 +82,8 @@ describe('serum-vial', () => {
       }
 
       expect(messagesCount).toBe(2)
+      expect(receivedSubscribed).toBe(true)
+      expect(receivedRecentTrades).toBe(true)
     },
     TIMEOUT
   )
@@ -99,16 +102,16 @@ describe('serum-vial', () => {
 
       await wsClient.send(subscribeRequest)
       let l1MessagesCount = 0
+      let receivedSubscribed = false
+      let receivedQuoteMessage = false
 
       for await (const message of wsClient.stream()) {
-        const isFirstMessage = l1MessagesCount === 0
-        if (isFirstMessage) {
-          expect(message.type).toEqual('subscribed')
+        if (message.type === 'subscribed') {
+          receivedSubscribed = true
         }
 
-        const secondDataMessage = l1MessagesCount === 1
-        if (secondDataMessage) {
-          expect(message.type).toEqual('quote')
+        if (message.type === 'quote') {
+          receivedQuoteMessage = true
         }
 
         l1MessagesCount++
@@ -118,6 +121,8 @@ describe('serum-vial', () => {
       }
 
       expect(l1MessagesCount).toBe(10)
+      expect(receivedSubscribed).toBe(true)
+      expect(receivedQuoteMessage).toBe(true)
     },
     TIMEOUT
   )
@@ -127,6 +132,8 @@ describe('serum-vial', () => {
     async () => {
       const wsClient = new SimpleWebsocketClient(WS_ENDPOINT)
       const markets = await fetchMarkets()
+      let receivedSubscribed = false
+      let receivedSnapshot = false
 
       const subscribeRequest: SubRequest = {
         op: 'subscribe',
@@ -138,14 +145,12 @@ describe('serum-vial', () => {
       let l2MessagesCount = 0
 
       for await (const message of wsClient.stream()) {
-        const isFirstMessage = l2MessagesCount === 0
-        if (isFirstMessage) {
-          expect(message.type).toEqual('subscribed')
+        if (message.type === 'subscribed') {
+          receivedSubscribed = true
         }
 
-        const firstDataMessage = l2MessagesCount === 1
-        if (firstDataMessage) {
-          expect(message.type).toEqual('l2snapshot')
+        if (message.type === 'l3snapshot') {
+          receivedSnapshot = true
         }
 
         l2MessagesCount++
@@ -155,6 +160,8 @@ describe('serum-vial', () => {
       }
 
       expect(l2MessagesCount).toBe(10)
+      expect(receivedSnapshot).toBe(true)
+      expect(receivedSubscribed).toBe(true)
     },
     TIMEOUT
   )
@@ -171,18 +178,19 @@ describe('serum-vial', () => {
         markets: markets.map((m) => m.name)
       }
 
+      let receivedSubscribed = false
+      let receivedSnapshot = false
+
       await wsClient.send(subscribeRequest)
       let l3MessagesCount = 0
 
       for await (const message of wsClient.stream()) {
-        const isFirstMessage = l3MessagesCount === 0
-        if (isFirstMessage) {
-          expect(message.type).toEqual('subscribed')
+        if (message.type === 'subscribed') {
+          receivedSubscribed = true
         }
 
-        const firstDataMessage = l3MessagesCount === 1
-        if (firstDataMessage) {
-          expect(message.type).toEqual('l3snapshot')
+        if (message.type === 'l3snapshot') {
+          receivedSnapshot = true
         }
 
         l3MessagesCount++
@@ -192,6 +200,8 @@ describe('serum-vial', () => {
       }
 
       expect(l3MessagesCount).toBe(20)
+      expect(receivedSubscribed).toBe(true)
+      expect(receivedSnapshot).toBe(true)
     },
     TIMEOUT
   )
