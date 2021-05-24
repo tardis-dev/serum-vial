@@ -91,7 +91,7 @@ class Minion {
         compression: DISABLED,
         maxPayloadLength: 256 * 1024,
         idleTimeout: 60, // closes WS connection if no message/ping send/received in 1 minute
-        maxBackpressure: 512 * 1024, // close if client is too slow to read the data fast enough
+        maxBackpressure: 1024 * 1024, // close if client is too slow to read the data fast enough
         closeOnBackpressureLimit: true,
         message: (ws: any, message: any) => {
           this._handleSubscriptionRequest(ws, message)
@@ -315,10 +315,10 @@ class Minion {
   private async _send(ws: WebSocket, getMessage: () => string | undefined) {
     let retries = 0
     while (ws.getBufferedAmount() > 0) {
-      await wait(2)
+      await wait(3)
       retries += 1
 
-      if (retries > 300) {
+      if (retries > 600) {
         ws.end(1008, 'Too much backpressure')
       }
     }
