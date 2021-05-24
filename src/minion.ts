@@ -325,7 +325,7 @@ class Minion {
 
     const message = getMessage()
     if (message !== undefined) {
-      ws.send(message)
+      ws.send(message, false)
     }
   }
 
