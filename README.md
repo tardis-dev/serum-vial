@@ -76,7 +76,7 @@ Serum-vial demo WebSocket server backed by [locally running Solana RPC node](htt
 
 <br/>
 
-[wss://api.serum-vial.dev/v1/ws(wss://api.serum-vial.dev/v1/ws)
+[wss://api.serum-vial.dev/v1/ws](wss://api.serum-vial.dev/v1/ws)
 
 <br/>
 
