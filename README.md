@@ -257,7 +257,7 @@ ws.onopen = () => {
 
 #### Subscription confirmation message format
 
-Once a subscribe (or unsubscribe) message is received by the server, it will push `subscribed` (or `unsubscribed`) confirmation message or `error` if received message was invalid.
+Once a subscription (or unsubscription) request is processed by the server, it will push `subscribed` (or `unsubscribed`) confirmation message or `error` if received request message was invalid.
 
 ```ts
 {
