@@ -38,7 +38,7 @@ Run the code snippet below in the browser Dev Tools directly or in Node.js (requ
 
 ```js
 // connect to hosted demo server
-const ws = new WebSocket('wss://serum-vial.tardis.dev/v1/ws')
+const ws = new WebSocket('wss://api.serum-vial.dev/v1/ws')
 // if connecting to serum-vial server running locally
 // const ws = new WebSocket('ws://localhost:8000/v1/ws')
 
@@ -76,7 +76,7 @@ Serum-vial demo WebSocket server backed by [locally running Solana RPC node](htt
 
 <br/>
 
-[wss://serum-vial.tardis.dev/v1/ws](wss://serum-vial.tardis.dev/v1/ws)
+[wss://api.serum-vial.dev/v1/ws(wss://api.serum-vial.dev/v1/ws)
 
 <br/>
 
@@ -84,7 +84,7 @@ Serum DEX UI backed by serum-vial demo WebSocket server for it's trade and order
 
 <br/>
 
-[https://serum-dex.tardis.dev](https://serum-dex.tardis.dev/)
+[https://serum-vial.dev](https://serum-vial.dev/)
 
 <br/>
 
@@ -92,7 +92,7 @@ Since by default serum-vial uses [`confirmed` commitment level](https://docs.sol
 
 Trade data is provided faster since by default DEX UI is pooling `eventQueue` account data on interval due to it's size (> 1MB), and serum-vial uses real-time `eventQueue` account notification as a source for trade messages which aren't delayed by pooling interval time.
 
-[![See demo](https://img.shields.io/badge/-See%20Demo%20DEX%20UI-c?color=05aac5)](https://serum-dex.tardis.dev/)
+[![See demo](https://img.shields.io/badge/-See%20Demo%20DEX%20UI-c?color=05aac5)](https://serum-vial.dev/)
 
 <br/>
 <br/>
@@ -204,7 +204,7 @@ WebSocket API provides real-time market data feeds of Serum DEX and uses a bidir
 
 - **[ws://localhost:8000/v1/ws](ws://localhost:8000/v1/ws)** - assuming serum-vial runs locally on default port without SSL enabled
 
-- **[wss://serum-vial.tardis.dev/v1/ws](wss://serum-vial.tardis.dev/v1/ws)** - demo serum-vial server endpoint
+- **[wss://api.serum-vial.dev/v1/ws](wss://api.serum-vial.dev/v1/ws)** - demo serum-vial server endpoint
 
 <br/>
 
@@ -843,7 +843,7 @@ Returns Serum DEX markets list supported by serum-vial instance (it can be updat
 
 - [http://localhost:8000/v1/markets](http://localhost:8000/v1/markets) - assuming serum-vial runs locally on default port without SSL enabled
 
-- [https://serum-vial.tardis.dev/v1/markets](https://serum-vial.tardis.dev/v1/markets) - demo serum-vial server endpoint
+- [https://api.serum-vial.dev/v1/markets](https://api.serum-vial.dev/v1/markets) - demo serum-vial server endpoint
 
 <br/>
 
