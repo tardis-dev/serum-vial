@@ -84,8 +84,7 @@ class Minion {
     const options = useSSL
       ? {
           key_file_name: process.env.KEY_FILE_NAME,
-          cert_file_name: process.env.CERT_FILE_NAME,
-          ssl_prefer_low_memory_usage: true
+          cert_file_name: process.env.CERT_FILE_NAME
         }
       : {}
     return WsApp(options)
