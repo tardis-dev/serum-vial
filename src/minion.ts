@@ -167,7 +167,7 @@ class Minion {
       )
 
       this._cachedListMarketsResponse = JSON.stringify(markets, null, 2)
-      serumMarketsChannel.postMessage(this._cachedListMarketsResponse)
+      // serumMarketsChannel.postMessage(this._cachedListMarketsResponse)
     }
 
     if (!res.aborted) {
