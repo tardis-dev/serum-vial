@@ -173,7 +173,8 @@ class Minion {
     await wait(1)
 
     if (!res.aborted) {
-      res.writeHeader('content-type', 'application/json')
+      res.writeStatus('200 OK')
+      res.writeHeader('Content-Type', 'application/json')
       res.end(this._cachedListMarketsResponse)
     }
   }
