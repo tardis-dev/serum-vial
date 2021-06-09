@@ -128,11 +128,11 @@ class Minion {
 
   //async based on https://github.com/uNetworking/uWebSockets.js/blob/master/examples/AsyncFunction.js
   private _listMarkets = async (res: HttpResponse) => {
-    res.onAborted(() => {
-      res.aborted = true
-    })
-
     if (this._cachedListMarketsResponse === undefined) {
+      res.onAborted(() => {
+        res.aborted = true
+      })
+
       const markets = await Promise.all(
         this._markets.map((market) => {
           return executeAndRetry(
@@ -161,7 +161,7 @@ class Minion {
               }
               return serumMarket
             },
-            { maxRetries: 4 }
+            { maxRetries: 10 }
           )
         })
       )
@@ -172,7 +172,7 @@ class Minion {
 
     if (!res.aborted) {
       res.writeHeader('content-type', 'application/json')
-      res.end(this._cachedListMarketsResponse)
+      ;(res.end as any)(this._cachedListMarketsResponse, true)
     }
   }
 
