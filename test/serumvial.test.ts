@@ -36,7 +36,7 @@ describe('serum-vial', () => {
 
   afterAll(async () => {
     await stopServer()
-  })
+  }, TIMEOUT)
 
   test(
     'HTTP GET /markets',
