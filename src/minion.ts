@@ -378,10 +378,10 @@ class Minion {
       } as const
     }
 
-    if (payload.markets.length > 40) {
+    if (payload.markets.length > 100) {
       return {
         isValid: false,
-        error: `Too large markets array provided (> 40 items).`
+        error: `Too large markets array provided (> 100 items).`
       } as const
     }
 

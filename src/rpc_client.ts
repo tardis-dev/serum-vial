@@ -221,6 +221,10 @@ class AccountsChangeNotifications {
 
     ws.onopen = async () => {
       try {
+        this._subscribeToHeartbeat(ws)
+        this._sendPeriodicPings(ws)
+        this._monitorConnectionIfStale(ws)
+
         const { accountsData, slot } = await executeAndRetry(async () => this._fetchAccountsSnapshot(), {
           maxRetries: 10
         })
@@ -240,9 +244,6 @@ class AccountsChangeNotifications {
       }
 
       this._subscribeToAccountsNotifications(ws)
-      this._subscribeToHeartbeat(ws)
-      this._sendPeriodicPings(ws)
-      this._monitorConnectionIfStale(ws)
 
       logger.log('info', 'Established new RPC WebSocket connection...', { market: this._options.marketName })
     }
@@ -439,6 +440,9 @@ class AccountsChangeNotifications {
 
   private _subscribeToAccountsNotifications(ws: WebSocket) {
     for (const meta of this._accountsMeta) {
+      if (ws.readyState !== ws.OPEN) {
+        throw new Error('_subscribeToAccountsNotifications WS closed')
+      }
       this._sendMessage(ws, {
         jsonrpc: '2.0',
         id: meta.reqId,
@@ -492,6 +496,10 @@ class AccountsChangeNotifications {
   }
 
   private _sendMessage(ws: WebSocket, message: any) {
+    if (ws.readyState !== ws.OPEN) {
+      return
+    }
+
     ws.send(JSON.stringify(message), (err) => {
       if (err !== undefined) {
         logger.log('warn', `WS send error: ${err.message}`)
