@@ -3,16 +3,16 @@
 exports[`serum-vial HTTP GET /markets 1`] = `
 Array [
   Object {
-    "address": "A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw",
-    "baseCurrency": "BTC",
-    "baseMintAddress": "9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E",
+    "address": "HWHvQhFmJB3NUcu1aihKmrKegfVxBEHzwVX6yZCKEsi1",
+    "baseCurrency": "SOL",
+    "baseMintAddress": "So11111111111111111111111111111111111111112",
     "deprecated": false,
-    "minOrderSize": 0.0001,
-    "name": "BTC/USDC",
+    "minOrderSize": 0.1,
+    "name": "SOL/USDT",
     "programId": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
-    "quoteCurrency": "USDC",
-    "quoteMintAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    "tickSize": 0.1,
+    "quoteCurrency": "USDT",
+    "quoteMintAddress": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+    "tickSize": 0.001,
     "version": 3,
   },
 ]

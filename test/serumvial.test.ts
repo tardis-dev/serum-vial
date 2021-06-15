@@ -4,7 +4,7 @@ import { bootServer, stopServer, DataMessage, SerumListMarketItem, SubRequest, S
 import { wait } from '../dist/helpers'
 
 const PORT = 8989
-const TIMEOUT = 90 * 1000
+const TIMEOUT = 180 * 1000
 const WS_ENDPOINT = `ws://localhost:${PORT}/v1/ws`
 
 async function fetchMarkets() {
@@ -22,9 +22,9 @@ describe('serum-vial', () => {
 
       markets: [
         {
-          address: 'A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw',
+          address: 'HWHvQhFmJB3NUcu1aihKmrKegfVxBEHzwVX6yZCKEsi1',
           deprecated: false,
-          name: 'BTC/USDC',
+          name: 'SOL/USDT',
           programId: '9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin'
         }
       ],
