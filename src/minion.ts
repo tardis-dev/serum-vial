@@ -184,30 +184,32 @@ class Minion {
     logger.log('info', 'Cached markets info response', meta)
   }
 
-  public async processMessage(message: MessageEnvelope) {
-    const topic = `${message.type}/${message.market}`
+  public processMessages(messages: MessageEnvelope[]) {
+    for (const message of messages) {
+      const topic = `${message.type}-${message.market}`
 
-    if (logger.level === 'debug') {
-      const diff = new Date().valueOf() - new Date(message.timestamp).valueOf()
-      logger.log('debug', `Processing message, topic: ${topic}, receive delay: ${diff}ms`, meta)
-    }
-    if (message.type === 'l2snapshot') {
-      this._l2SnapshotsSerialized[message.market] = message.payload
-    }
-    if (message.type === 'l3snapshot') {
-      this._l3SnapshotsSerialized[message.market] = message.payload
-    }
+      if (logger.level === 'debug') {
+        const diff = new Date().valueOf() - new Date(message.timestamp).valueOf()
+        logger.log('debug', `Processing message, topic: ${topic}, receive delay: ${diff}ms`, meta)
+      }
+      if (message.type === 'l2snapshot') {
+        this._l2SnapshotsSerialized[message.market] = message.payload
+      }
+      if (message.type === 'l3snapshot') {
+        this._l3SnapshotsSerialized[message.market] = message.payload
+      }
 
-    if (message.type === 'quote') {
-      this._quotesSerialized[message.market] = message.payload
-    }
+      if (message.type === 'quote') {
+        this._quotesSerialized[message.market] = message.payload
+      }
 
-    if (message.type === 'recent_trades') {
-      this._recentTradesSerialized[message.market] = message.payload
-    }
+      if (message.type === 'recent_trades') {
+        this._recentTradesSerialized[message.market] = message.payload
+      }
 
-    if (message.publish) {
-      this._server.publish(topic, message.payload)
+      if (message.publish) {
+        this._server.publish(topic, message.payload)
+      }
     }
   }
 
@@ -252,10 +254,9 @@ class Minion {
 
       // 'unpack' channel to specific message types that will be published for it
       const requestedTypes = MESSAGE_TYPES_PER_CHANNEL[request.channel]
-
-      for (const type of requestedTypes) {
-        for (const market of request.markets) {
-          const topic = `${type}/${market}`
+      for (const market of request.markets) {
+        for (const type of requestedTypes) {
+          const topic = `${type}-${market}`
           if (request.op === 'subscribe') {
             if (ws.isSubscribed(topic)) {
               continue
@@ -411,7 +412,7 @@ const minion = new Minion(nodeEndpoint, markets)
 
 minion.start(port).then(() => {
   serumDataChannel.onmessage = (message) => {
-    minion.processMessage(message.data)
+    minion.processMessages(message.data)
   }
 
   serumMarketsChannel.onmessage = (message) => {

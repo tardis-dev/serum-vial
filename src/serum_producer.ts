@@ -76,8 +76,9 @@ export class SerumProducer {
       if (notification.reset) {
         dataMapper.reset()
       } else {
-        for (const message of dataMapper.map(notification)) {
-          onData(message)
+        const messagesForSlot = [...dataMapper.map(notification)]
+        if (messagesForSlot.length > 0) {
+          onData(messagesForSlot)
         }
       }
     }
@@ -86,8 +87,8 @@ export class SerumProducer {
 
 const serumProducer = new SerumProducer(workerData)
 
-serumProducer.run((envelope) => {
-  serumDataChannel.postMessage(envelope)
+serumProducer.run((envelopes) => {
+  serumDataChannel.postMessage(envelopes)
 })
 
 export type MessageEnvelope = {
@@ -98,4 +99,4 @@ export type MessageEnvelope = {
   timestamp: string
 }
 
-type OnDataCallback = (envelope: MessageEnvelope) => void
+type OnDataCallback = (envelopes: MessageEnvelope[]) => void
