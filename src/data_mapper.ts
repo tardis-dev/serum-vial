@@ -246,12 +246,30 @@ export class DataMapper {
       accountsData.bids !== undefined ? this._getL2Diff(this._currentL2Snapshot.bids, newL2Snapshot.bids) : []
 
     if (l3Diff.length > 0) {
-      for (const message of l3Diff) {
+      for (let i = 0; i < l3Diff.length; i++) {
+        const message = l3Diff[i]!
+
         yield this._putInEnvelope(message, true)
 
         // detect l2 trades based on fills
         if (message.type === 'fill' && message.maker === false) {
-          const tradeId = `${message.orderId}|${message.size}|${new Date(timestamp).valueOf()}`
+          // this is rather fragile way of finding matching fill, can it be done better?
+
+          const matchingMakerFill =
+            l3Diff[i - 1] !== undefined && l3Diff[i - 1]!.type === 'fill'
+              ? (l3Diff[i - 1] as Fill)
+              : l3Diff[i - 2] !== undefined && l3Diff[i - 2]!.type === 'fill'
+              ? (l3Diff[i - 2] as Fill)
+              : undefined
+
+          const makerFillOrderId =
+            matchingMakerFill !== undefined &&
+            matchingMakerFill.maker === true &&
+            matchingMakerFill.size === message.size
+              ? matchingMakerFill.orderId
+              : '_'
+
+          const tradeId = `${message.orderId}|${makerFillOrderId}`
 
           const tradeMessage: Trade = {
             type: 'trade',
@@ -651,7 +669,7 @@ export class DataMapper {
     if (this._lastSeenSeqNum !== undefined) {
       const allocLen = Math.floor((eventQueueData.length - HEADER.span) / NODE.span)
 
-      const newEventsCount = header.seqNum - this._lastSeenSeqNum
+      const newEventsCount = Math.min(header.seqNum - this._lastSeenSeqNum, allocLen - 1)
 
       for (let i = newEventsCount; i > 0; --i) {
         const nodeIndex = (header.head + header.count + allocLen - i) % allocLen

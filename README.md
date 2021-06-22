@@ -403,7 +403,7 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
 
 - `side` describes a liquidity taker side
 
-- `id` field is an unique id constructed by joining taker order id, order size and timestamp (as milliseconds since epoch)
+- `id` field is an unique id constructed by joining fill taker and fill maker order id
 
 ```ts
 {
