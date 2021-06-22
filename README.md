@@ -428,7 +428,7 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
   "timestamp": "2021-03-23T19:03:06.723Z",
   "slot": 70468384,
   "version": 3,
-  "id": "10239824528804319520203515|3.0821|1616526186723",
+  "id": "429716903197064009133440|432281000623309628330652",
   "side": "buy",
   "price": "55447.7",
   "size": "3.0821"
