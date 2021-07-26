@@ -397,7 +397,8 @@ class AccountsChangeNotifications {
   private async _restartConnection() {
     this.onAccountsChange({ reset: true })
 
-    const delayMs = this._retriesCount > 0 ? this._retriesCount * 50 : 0
+    const delayMs = this._retriesCount > 0 ? this._retriesCount * this._retriesCount * 300 : 0
+
     logger.log('info', 'Restarting RPC WebSocket connection...', { market: this._options.marketName, delayMs })
 
     if (delayMs > 0) {
