@@ -67,7 +67,6 @@ export class RPCClient {
     const accountInfo: AccountInfo<Buffer> = {
       owner: new PublicKey(result.value.owner),
       data: Buffer.from(result.value.data[0], 'base64'),
-      rentEpoch: result.value.rentEpoch,
       lamports: result.value.lamports,
       executable: result.value.executable
     }
