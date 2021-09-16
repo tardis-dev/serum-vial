@@ -397,7 +397,7 @@ class AccountsChangeNotifications {
   private async _restartConnection() {
     this.onAccountsChange({ reset: true })
 
-    const delayMs = this._retriesCount > 0 ? this._retriesCount * this._retriesCount * 300 : 0
+    const delayMs = this._retriesCount > 0 ? Math.min(Math.pow(2, this._retriesCount) * 1000, 32 * 1000) : 0
 
     logger.log('info', 'Restarting RPC WebSocket connection...', { market: this._options.marketName, delayMs })
 
@@ -485,14 +485,14 @@ class AccountsChangeNotifications {
     // set up timer that checks against open, but stale connections that do not return any data
     this._staleConnectionTID = setInterval(() => {
       if (this._receivedMessagesCount === 0) {
-        logger.log('info', `Did not received any messages within 60s timeout, terminating connection...`, {
+        logger.log('info', `Did not received any messages within 120s timeout, terminating connection...`, {
           market: this._options.marketName
         })
 
         ws.terminate()
       }
       this._receivedMessagesCount = 0
-    }, 60 * 1000)
+    }, 120 * 1000)
   }
 
   private _sendMessage(ws: WebSocket, message: any) {
