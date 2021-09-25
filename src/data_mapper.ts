@@ -239,6 +239,22 @@ export class DataMapper {
       bestBid: newL2Snapshot.bids[0]
     }
 
+    if (this._options.validateL3Diffs) {
+      const bookIsCrossed =
+        newL2Snapshot.asks.length > 0 &&
+        newL2Snapshot.bids.length > 0 &&
+        // best bid price is >= best ask price
+        Number(newL2Snapshot.bids[0]![0]) >= Number(newL2Snapshot.asks[0]![0])
+
+      if (bookIsCrossed) {
+        logger.log('warn', 'Crossed L2 Book', {
+          quote: newQuote,
+          slot,
+          _invalidSubsequentL3DiffsCount: this._invalidSubsequentL3DiffsCount
+        })
+      }
+    }
+
     const asksDiff =
       accountsData.asks !== undefined ? this._getL2Diff(this._currentL2Snapshot.asks, newL2Snapshot.asks) : []
 
