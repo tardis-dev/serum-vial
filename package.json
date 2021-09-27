@@ -16,8 +16,8 @@
     "test": "npm run build && jest --forceExit",
     "prepare": "npm run build",
     "start:debug": "npm run build && node ./bin/serum-vial.js --log-level=debug",
-    "format": "prettier --write **/*.{ts,json,md,yaml}",
-    "check-format": "prettier --check **/*.{ts,json,md,yaml}"
+    "format": "prettier --write .",
+    "check-format": "prettier --check ."
   },
   "bin": {
     "serum-vial": "bin/serum-vial.js"
