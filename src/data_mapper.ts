@@ -139,7 +139,7 @@ export class DataMapper {
     if (this._options.validateL3Diffs && this._initialized && l3Diff.length > 0) {
       const diffIsValid = this._validateL3DiffCorrectness(l3Diff)
 
-      if (diffIsValid === false && this._invalidSubsequentL3DiffsCount >= 1) {
+      if (diffIsValid === false && this._invalidSubsequentL3DiffsCount >= 0) {
         logger.log('warn', 'Resetting data mapper state due to invalid l3diff', {
           market: this._options.symbol,
           asksAccountExists: accountsData.asks !== undefined,
@@ -248,6 +248,7 @@ export class DataMapper {
 
       if (bookIsCrossed) {
         logger.log('warn', 'Crossed L2 Book', {
+          market: this._options.symbol,
           quote: newQuote,
           slot,
           _invalidSubsequentL3DiffsCount: this._invalidSubsequentL3DiffsCount
