@@ -238,7 +238,7 @@ class AccountsChangeNotifications {
         })
 
         this._currentSlot = slot
-      } catch (err) {
+      } catch (err: any) {
         logger.log('warn', `Failed to fetch accounts snapshot, ${err.message}`, { market: this._options.marketName })
       }
 

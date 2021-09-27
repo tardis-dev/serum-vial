@@ -315,7 +315,7 @@ class Minion {
         successMessage: confirmationMessage,
         ...meta
       })
-    } catch (err) {
+    } catch (err: any) {
       const message = 'Subscription request internal error'
       const errorMessage = typeof err === 'string' ? err : `${err.message}, ${err.stack}`
 
