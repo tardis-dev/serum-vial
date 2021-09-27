@@ -46,7 +46,7 @@
     "bintrees": "^1.0.2",
     "bn.js": "^5.2.0",
     "didyoumean2": "^5.0.0",
-    "is-docker": "^3.0.0",
+    "is-docker": "^2.2.1",
     "node-fetch": "^2.6.1",
     "uWebSockets.js": "git+https://git@github.com/uNetworking/uWebSockets.js.git#v19.5.0",
     "winston": "^3.3.3",
