@@ -18,8 +18,6 @@ describe('serum-vial', () => {
     await bootServer({
       port: PORT,
       commitment: 'confirmed',
-      validateL3Diffs: true,
-
       markets: [
         {
           address: 'HWHvQhFmJB3NUcu1aihKmrKegfVxBEHzwVX6yZCKEsi1',

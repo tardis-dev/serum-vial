@@ -3,7 +3,7 @@ import { PublicKey } from '@solana/web3.js'
 import { isMainThread, workerData } from 'worker_threads'
 import { MessageType } from './consts'
 import { DataMapper } from './data_mapper'
-import { decimalPlaces, serumDataChannel, serumProducerReadyChannel } from './helpers'
+import { decimalPlaces, partitionDetectedChannel, serumDataChannel, serumProducerReadyChannel } from './helpers'
 import { logger } from './logger'
 import { RPCClient } from './rpc_client'
 import { SerumMarket } from './types'
@@ -28,7 +28,6 @@ export class SerumProducer {
     private readonly _options: {
       nodeEndpoint: string
       wsEndpointPort: number | undefined
-      validateL3Diffs: boolean
       marketName: string
       commitment: string
       markets: SerumMarket[]
@@ -63,8 +62,14 @@ export class SerumProducer {
       market,
       priceDecimalPlaces,
       sizeDecimalPlaces,
-      validateL3Diffs: this._options.validateL3Diffs
+      onPartitionDetected: () => {
+        partitionDetectedChannel.postMessage('partition-detected')
+      }
     })
+
+    partitionDetectedChannel.onmessage = () => {
+      dataMapper.reset()
+    }
 
     for await (const notification of rpcClient.streamAccountsNotification(market, this._options.marketName)) {
       if (started === false) {

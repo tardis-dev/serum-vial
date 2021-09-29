@@ -31,12 +31,11 @@ export class DataMapper {
   private _asksAccountSlabItems: SlabItem[] | undefined = undefined
 
   // _local* are used only for verification purposes
-  private _localBidsOrders: OrderItem[] | undefined = undefined
-  private _localAsksOrders: OrderItem[] | undefined = undefined
+  private _localBidsOrdersMap: Map<string, OrderItem> | undefined = undefined
+  private _localAsksOrdersMap: Map<string, OrderItem> | undefined = undefined
 
   private _initialized = false
   private _lastSeenSeqNum: number | undefined = undefined
-  private _invalidSubsequentL3DiffsCount = 0
 
   private _currentL2Snapshot:
     | {
@@ -63,7 +62,7 @@ export class DataMapper {
       readonly market: Market
       readonly priceDecimalPlaces: number
       readonly sizeDecimalPlaces: number
-      readonly validateL3Diffs: boolean
+      readonly onPartitionDetected: () => void
     }
   ) {
     this._version = getLayoutVersion(this._options.market.programId) as number
@@ -136,24 +135,22 @@ export class DataMapper {
       this._bidsAccountOrders = newBidsOrders
     }
 
-    if (this._options.validateL3Diffs && this._initialized && l3Diff.length > 0) {
+    if (this._initialized && l3Diff.length > 0) {
       const diffIsValid = this._validateL3DiffCorrectness(l3Diff)
 
-      if (diffIsValid === false && this._invalidSubsequentL3DiffsCount >= 0) {
-        logger.log('warn', 'Resetting data mapper state due to invalid l3diff', {
+      if (diffIsValid === false) {
+        logger.log('warn', 'PartitionDetected: invalid l3diff', {
           market: this._options.symbol,
           asksAccountExists: accountsData.asks !== undefined,
           bidsAccountExists: accountsData.bids !== undefined,
           eventQueueAccountExists: accountsData.eventQueue !== undefined,
           slot
         })
+
         this.reset()
+        this._options.onPartitionDetected()
+
         return
-      }
-      if (diffIsValid == false) {
-        this._invalidSubsequentL3DiffsCount++
-      } else {
-        this._invalidSubsequentL3DiffsCount = 0
       }
     }
 
@@ -239,21 +236,23 @@ export class DataMapper {
       bestBid: newL2Snapshot.bids[0]
     }
 
-    if (this._options.validateL3Diffs) {
-      const bookIsCrossed =
-        newL2Snapshot.asks.length > 0 &&
-        newL2Snapshot.bids.length > 0 &&
-        // best bid price is >= best ask price
-        Number(newL2Snapshot.bids[0]![0]) >= Number(newL2Snapshot.asks[0]![0])
+    const bookIsCrossed =
+      newL2Snapshot.asks.length > 0 &&
+      newL2Snapshot.bids.length > 0 &&
+      // best bid price is >= best ask price
+      Number(newL2Snapshot.bids[0]![0]) >= Number(newL2Snapshot.asks[0]![0])
 
-      if (bookIsCrossed) {
-        logger.log('warn', 'Crossed L2 Book', {
-          market: this._options.symbol,
-          quote: newQuote,
-          slot,
-          _invalidSubsequentL3DiffsCount: this._invalidSubsequentL3DiffsCount
-        })
-      }
+    if (bookIsCrossed) {
+      logger.log('warn', 'PartitionDetected: crossed L2 book', {
+        market: this._options.symbol,
+        quote: newQuote,
+        slot
+      })
+
+      this.reset()
+      this._options.onPartitionDetected()
+
+      return
     }
 
     const asksDiff =
@@ -399,30 +398,34 @@ export class DataMapper {
   }
 
   public reset() {
+    if (this._initialized === false) {
+      return
+    }
+
     this._initialized = false
     this._lastSeenSeqNum = undefined
     this._bidsAccountOrders = undefined
     this._asksAccountOrders = undefined
-    this._localBidsOrders = undefined
-    this._localAsksOrders = undefined
+    this._localBidsOrdersMap = undefined
+    this._localAsksOrdersMap = undefined
     this._currentL2Snapshot = undefined
     this._currentQuote = undefined
-    this._invalidSubsequentL3DiffsCount = 0
   }
 
   private _validateL3DiffCorrectness(l3Diff: (Open | Fill | Done | Change)[]) {
     // first make sure we have initial snapshots to apply diffs to
 
-    if (this._localAsksOrders === undefined && this._localBidsOrders === undefined) {
-      this._localAsksOrders = this._asksAccountOrders
-      this._localBidsOrders = this._bidsAccountOrders
+    if (this._localAsksOrdersMap === undefined && this._localBidsOrdersMap === undefined) {
+      this._localAsksOrdersMap = new Map(this._asksAccountOrders!.map(this._toMapConstructorStructure))
+      this._localBidsOrdersMap = new Map(this._bidsAccountOrders!.map(this._toMapConstructorStructure))
+
       return true
     }
 
     for (const item of l3Diff) {
-      const orders = (item.side === 'buy' ? this._localBidsOrders : this._localAsksOrders)!
+      const ordersMap = (item.side === 'buy' ? this._localBidsOrdersMap : this._localAsksOrdersMap)!
       if (item.type === 'open') {
-        orders.push({
+        ordersMap.set(item.orderId, {
           orderId: item.orderId,
           clientId: item.clientId,
           side: item.side,
@@ -435,7 +438,7 @@ export class DataMapper {
       }
 
       if (item.type === 'fill') {
-        const matchingOrder = orders.find((o) => o.orderId === item.orderId)
+        const matchingOrder = ordersMap.get(item.orderId)
 
         if (matchingOrder !== undefined) {
           ;(matchingOrder as any).size = (Number((matchingOrder as any).size) - Number(item.size)).toFixed(
@@ -445,24 +448,21 @@ export class DataMapper {
       }
 
       if (item.type === 'change') {
-        const matchingOrder = orders.find((o) => o.orderId === item.orderId)
+        const matchingOrder = ordersMap.get(item.orderId)
         ;(matchingOrder as any).size = item.size
       }
 
       if (item.type === 'done') {
-        const indexToRemove = orders.findIndex((o) => o.orderId === item.orderId)
-        if (indexToRemove !== -1) {
-          orders.splice(indexToRemove, 1)
-        }
+        ordersMap.delete(item.orderId)
       }
     }
 
-    if (this._bidsAccountOrders!.length !== this._localBidsOrders!.length) {
+    if (this._bidsAccountOrders!.length !== this._localBidsOrdersMap!.size) {
       return false
     }
 
     for (let bid of this._bidsAccountOrders!) {
-      const matchingLocalBid = this._localBidsOrders!.find((b) => b.orderId === bid.orderId)
+      const matchingLocalBid = this._localBidsOrdersMap!.get(bid.orderId)
       if (
         matchingLocalBid === undefined ||
         matchingLocalBid.price !== bid.price ||
@@ -472,12 +472,12 @@ export class DataMapper {
       }
     }
 
-    if (this._asksAccountOrders!.length !== this._localAsksOrders!.length) {
+    if (this._asksAccountOrders!.length !== this._localAsksOrdersMap!.size) {
       return false
     }
 
     for (let ask of this._asksAccountOrders!) {
-      const matchingLocalAsk = this._localAsksOrders!.find((a) => a.orderId === ask.orderId)
+      const matchingLocalAsk = this._localAsksOrdersMap!.get(ask.orderId)
       if (
         matchingLocalAsk === undefined ||
         matchingLocalAsk.price !== ask.price ||
