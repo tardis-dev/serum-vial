@@ -239,12 +239,6 @@ class AccountsChangeNotifications {
       // if the last WS update was for older slot, let's init account with data from REST API
 
       if (this._currentSlot === undefined || this._currentSlot < slot) {
-        logger.log('info', 'Resetting with accounts data from REST API', {
-          market: this._options.marketName,
-          currentSlot: this._currentSlot,
-          slot
-        })
-
         this._update('asks', accountsData.asks!, slot)
         this._update('bids', accountsData.bids!, slot)
         this._update('eventQueue', accountsData.eventQueue!, slot)
@@ -255,12 +249,6 @@ class AccountsChangeNotifications {
       // after reset we received some WS updates but not for all accounts
       // let's update account for which we did not receive updates
       if (this._currentSlot === slot && this._state === 'PENDING') {
-        logger.log('info', 'Resetting with accounts data from REST API for pending notification', {
-          market: this._options.marketName,
-          currentSlot: this._currentSlot,
-          slot
-        })
-
         if (this._accountsData.asks === undefined) {
           this._update('asks', accountsData.asks!, slot)
         }
@@ -275,12 +263,6 @@ class AccountsChangeNotifications {
 
         return
       }
-
-      logger.log('info', 'Resetting waiting', {
-        market: this._options.marketName,
-        currentSlot: this._currentSlot,
-        slot
-      })
     }
   }
 
@@ -674,14 +656,14 @@ class AccountsChangeNotifications {
       // if after we published accounts notification
       // and for some reason next received notification is for already published slot or older
       // restart sub as it's this is situation that should never happen
-      if (slot <= this._currentSlot!) {
+      if (slot < this._currentSlot!) {
         logger.log(
           'warn',
           `Out of order notification for PUBLISHED event: current slot ${this._currentSlot}, update slot: ${slot}, resetting...`,
           { market: this._options.marketName }
         )
         this._resetPendingNotificationState()
-      } else {
+      } else if (slot > this._currentSlot!) {
         // otherwise move to pristine state
         this._state = 'PRISTINE'
       }
