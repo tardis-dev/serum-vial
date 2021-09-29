@@ -423,7 +423,8 @@ class AccountsChangeNotifications {
           params: [
             this._accountsMeta.map((a) => a.address),
             {
-              encoding: 'base64'
+              encoding: 'base64',
+              commitment: this._options.commitment
             }
           ]
         })
