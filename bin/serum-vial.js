@@ -45,12 +45,6 @@ const argv = yargs
     default: 1
   })
 
-  .option('validate-l3-diffs', {
-    type: 'boolean',
-    describe: 'Turns on validation of L3 diffs correctness (can impact perf)',
-    default: false
-  })
-
   .option('commitment', {
     type: 'string',
     describe: 'Solana commitment level to use when communicating with RPC node',
@@ -94,7 +88,6 @@ async function start() {
     port,
     nodeEndpoint: argv['endpoint'],
     wsEndpointPort: argv['ws-endpoint-port'],
-    validateL3Diffs: argv['validate-l3-diffs'],
     minionsCount: argv['minions-count'],
     commitment: argv['commitment']
   }

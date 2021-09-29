@@ -9,6 +9,7 @@ import { logger } from './logger'
 
 // simple solana RPC client
 export class RPCClient {
+  private _accountsChangeNotifications: AccountsChangeNotifications | undefined = undefined
   constructor(
     private readonly _options: {
       readonly nodeEndpoint: string
@@ -37,11 +38,11 @@ export class RPCClient {
       commitment: this._options.commitment
     }
 
-    const accountsNotifications = new AccountsChangeNotifications(market, options)
+    this._accountsChangeNotifications = new AccountsChangeNotifications(market, options)
 
     logger.log('info', 'Starting RPC client', options)
 
-    accountsNotifications.onAccountsChange = (notification) => {
+    this._accountsChangeNotifications.onAccountsChange = (notification) => {
       notificationsStream.write(notification)
     }
 
@@ -50,7 +51,13 @@ export class RPCClient {
         yield notification as AccountsNotification
       }
     } finally {
-      accountsNotifications.dispose()
+      this._accountsChangeNotifications.dispose()
+    }
+  }
+
+  public reset() {
+    if (this._accountsChangeNotifications !== undefined) {
+      this._accountsChangeNotifications.reset()
     }
   }
 
@@ -152,6 +159,7 @@ export class RPCClient {
 class AccountsChangeNotifications {
   private _currentSlot: number | undefined = undefined
   private _state: 'PRISTINE' | 'PENDING' | 'PUBLISHED' = 'PRISTINE'
+  private _fullyInitialized = false
   private _accountsData: AccountsData = {
     asks: undefined,
     bids: undefined,
@@ -207,6 +215,73 @@ class AccountsChangeNotifications {
   public dispose() {
     this._clearTimers()
     this._disposed = true
+  }
+
+  public async reset() {
+    this._resetPendingNotificationState()
+
+    while (true) {
+      await wait(1000)
+
+      if (this._fullyInitialized) {
+        return
+      }
+
+      const { accountsData, slot } = await executeAndRetry(async () => this._fetchAccountsSnapshot(), {
+        maxRetries: 10
+      })
+
+      if (this._fullyInitialized) {
+        return
+      }
+
+      // after reset when there were no updates via WS or
+      // if the last WS update was for older slot, let's init account with data from REST API
+
+      if (this._currentSlot === undefined || this._currentSlot < slot) {
+        logger.log('info', 'Resetting with accounts data from REST API', {
+          market: this._options.marketName,
+          currentSlot: this._currentSlot,
+          slot
+        })
+
+        this._update('asks', accountsData.asks!, slot)
+        this._update('bids', accountsData.bids!, slot)
+        this._update('eventQueue', accountsData.eventQueue!, slot)
+
+        return
+      }
+
+      // after reset we received some WS updates but not for all accounts
+      // let's update account for which we did not receive updates
+      if (this._currentSlot === slot && this._state === 'PENDING') {
+        logger.log('info', 'Resetting with accounts data from REST API for pending notification', {
+          market: this._options.marketName,
+          currentSlot: this._currentSlot,
+          slot
+        })
+
+        if (this._accountsData.asks === undefined) {
+          this._update('asks', accountsData.asks!, slot)
+        }
+
+        if (this._accountsData.bids === undefined) {
+          this._update('bids', accountsData.bids!, slot)
+        }
+
+        if (this._accountsData.eventQueue === undefined) {
+          this._update('eventQueue', accountsData.eventQueue!, slot)
+        }
+
+        return
+      }
+
+      logger.log('info', 'Resetting waiting', {
+        market: this._options.marketName,
+        currentSlot: this._currentSlot,
+        slot
+      })
+    }
   }
 
   private _connectAndStreamData() {
@@ -436,6 +511,7 @@ class AccountsChangeNotifications {
     this._slotStartTimestamp = undefined
     this._currentSlot = undefined
     this._state = 'PRISTINE'
+    this._fullyInitialized = false
   }
 
   private _subscribeToAccountsNotifications(ws: WebSocket) {
@@ -530,6 +606,10 @@ class AccountsChangeNotifications {
       slot: this._currentSlot!,
       reset: false
     })
+
+    if (this._fullyInitialized === false) {
+      this._fullyInitialized = this._receivedDataForAllAccounts()
+    }
 
     // clear pending accounts data
     this._accountsData = {

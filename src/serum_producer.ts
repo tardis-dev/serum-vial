@@ -64,11 +64,12 @@ export class SerumProducer {
       sizeDecimalPlaces,
       onPartitionDetected: () => {
         partitionDetectedChannel.postMessage('partition-detected')
+        rpcClient.reset()
       }
     })
 
     partitionDetectedChannel.onmessage = () => {
-      dataMapper.reset()
+      rpcClient.reset()
     }
 
     for await (const notification of rpcClient.streamAccountsNotification(market, this._options.marketName)) {

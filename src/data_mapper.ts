@@ -147,7 +147,6 @@ export class DataMapper {
           slot
         })
 
-        this.reset()
         this._options.onPartitionDetected()
 
         return
@@ -249,7 +248,6 @@ export class DataMapper {
         slot
       })
 
-      this.reset()
       this._options.onPartitionDetected()
 
       return
