@@ -230,12 +230,17 @@ class Minion {
         return
       }
 
-      const message = Buffer.from(buffer)
+      const message = Buffer.from(buffer).toString()
+
+      if (message === 'ping' || message === 'PING') {
+        return
+      }
+
       const validationResult = this._validateRequestPayload(message)
 
       if (validationResult.isValid === false) {
-        logger.log('info', `Invalid subscription message received, error: ${validationResult.error}`, {
-          message: message.toString(),
+        logger.log('debug', `Invalid subscription message received, error: ${validationResult.error}`, {
+          message,
           ...meta
         })
 
@@ -344,14 +349,14 @@ class Minion {
     }
   }
 
-  private _validateRequestPayload(message: Buffer) {
+  private _validateRequestPayload(message: string) {
     let payload
     try {
-      payload = JSON.parse(message as any) as SubRequest
+      payload = JSON.parse(message) as SubRequest
     } catch {
       return {
         isValid: false,
-        error: `Invalid JSON.`
+        error: `Invalid JSON`
       } as const
     }
 
