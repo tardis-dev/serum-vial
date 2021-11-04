@@ -39,7 +39,7 @@
   "license": "MPL-2.0",
   "dependencies": {
     "@project-serum/serum": "^0.13.60",
-    "@solana/web3.js": "^1.29.1",
+    "@solana/web3.js": "^1.30.2",
     "@types/bintrees": "^1.0.3",
     "@types/bn.js": "^5.1.0",
     "abort-controller": "^3.0.0",
@@ -48,23 +48,23 @@
     "didyoumean2": "^5.0.0",
     "is-docker": "^2.2.1",
     "node-fetch": "^2.6.1",
-    "uWebSockets.js": "git+https://git@github.com/uNetworking/uWebSockets.js.git#v19.5.0",
+    "uWebSockets.js": "git+https://git@github.com/uNetworking/uWebSockets.js.git#v20.4.0",
     "winston": "^3.3.3",
-    "ws": "^8.2.2",
+    "ws": "^8.2.3",
     "yargs": "^17.2.1"
   },
   "devDependencies": {
     "@types/jest": "^27.0.2",
-    "@types/node": "^16.10.1",
+    "@types/node": "^16.11.6",
     "@types/node-fetch": "^2.5.12",
     "@types/ws": "^8.2.0",
     "cross-var": "^1.1.0",
-    "husky": "^7.0.2",
-    "jest": "^27.2.2",
-    "lint-staged": "^11.1.2",
+    "husky": "^7.0.4",
+    "jest": "^27.3.1",
+    "lint-staged": "^11.2.6",
     "prettier": "^2.4.1",
-    "ts-jest": "^27.0.5",
-    "typescript": "^4.4.3"
+    "ts-jest": "^27.0.7",
+    "typescript": "^4.4.4"
   },
   "lint-staged": {
     "*.{ts}": [
