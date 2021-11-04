@@ -314,6 +314,14 @@ export class DataMapper {
     }
 
     if (asksDiff.length > 0 || bidsDiff.length > 0) {
+      if (l3Diff.length === 0) {
+        logger.log('warn', 'L2 diff without corresponding L3 diff', {
+          market: this._options.symbol,
+          asksDiff,
+          bidsDiff
+        })
+      }
+
       // since we have a diff it means snapshot has changed
       // so we need to pass new snapshot to minions, just without 'publish' flag
       this._currentL2Snapshot = newL2Snapshot
