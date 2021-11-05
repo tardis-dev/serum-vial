@@ -162,7 +162,7 @@ export class DataMapper {
       }
 
       const isInit = this._initialized === false
-      if (isInit) {
+      if (isInit && accountsData.eventQueue !== undefined) {
         // initialize with last sequence number
         const { HEADER } = EVENT_QUEUE_LAYOUT
         const header = HEADER.decode(accountsData.eventQueue) as EventQueueHeader
