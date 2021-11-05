@@ -100,12 +100,7 @@ export class DataMapper {
 
         for (const ask of newAsksOrders) {
           const matchingExistingOrder = currentAsksMap.get(ask.orderId)
-          const message = this._mapChangedOrderItemsToMessage(matchingExistingOrder, ask, timestamp, slot, l3Diff)
-
-          if (message !== undefined) {
-            // unshift as open/change messages should be processed before fill/done
-            l3Diff.unshift(message)
-          }
+          this._addChangedOrderItemsToL3Diff(matchingExistingOrder, ask, timestamp, slot, l3Diff)
         }
       }
 
@@ -122,12 +117,7 @@ export class DataMapper {
 
         for (const bid of newBidsOrders) {
           const matchingExistingOrder = currentBidsMap.get(bid.orderId)
-          const message = this._mapChangedOrderItemsToMessage(matchingExistingOrder, bid, timestamp, slot, l3Diff)
-
-          if (message !== undefined) {
-            // unshift as open/change messages should be processed before fill/done
-            l3Diff.unshift(message)
-          }
+          this._addChangedOrderItemsToL3Diff(matchingExistingOrder, bid, timestamp, slot, l3Diff)
         }
       }
 
@@ -372,7 +362,7 @@ export class DataMapper {
     }
   }
 
-  private _mapChangedOrderItemsToMessage(
+  private _addChangedOrderItemsToL3Diff(
     matchingExistingOrder: OrderItem | undefined,
     newOrder: OrderItem,
     timestamp: string,
@@ -391,16 +381,34 @@ export class DataMapper {
         }
       }
 
-      return this._mapToOrderMessage(newOrder, 'open', size, timestamp, slot)
+      const openMessage = this._mapToOrderMessage(newOrder, 'open', size, timestamp, slot)
+
+      const matchingL3Index = l3Diff.findIndex((i) => i.orderId === newOrder.orderId)
+
+      // insert open order before first matching l3 index if it exists
+      if (matchingL3Index !== -1) {
+        l3Diff.splice(matchingL3Index, 0, openMessage)
+      } else {
+        // if there's not matching fill/done l3 add open order at the end
+        l3Diff.push(openMessage)
+      }
     } else if (
       matchingExistingOrder.size !== newOrder.size &&
       l3Diff.some((i) => i.type === 'fill' && i.orderId === newOrder.orderId && i.maker) === false
     ) {
       // we have order change, can happen when  SelfTradeBehavior::DecrementTake?
-      return this._mapToOrderMessage(newOrder, 'change', newOrder.size, timestamp, slot)
-    }
+      const changeMessage = this._mapToOrderMessage(newOrder, 'change', newOrder.size, timestamp, slot)
 
-    return
+      const matchingL3Index = l3Diff.findIndex((i) => i.orderId === newOrder.orderId)
+
+      // insert open order before first matching l3 index if it exists
+      if (matchingL3Index !== -1) {
+        l3Diff.splice(matchingL3Index, 0, changeMessage)
+      } else {
+        // if there's not matching fill/done l3 add open order at the end
+        l3Diff.push(changeMessage)
+      }
+    }
   }
 
   public reset() {
