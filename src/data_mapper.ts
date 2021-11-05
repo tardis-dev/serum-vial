@@ -161,10 +161,17 @@ export class DataMapper {
         bids: this._bidsAccountOrders!
       }
 
-      const publish = this._initialized === false
+      const isInit = this._initialized === false
+      if (isInit) {
+        // initialize with last sequence number
+        const { HEADER } = EVENT_QUEUE_LAYOUT
+        const header = HEADER.decode(accountsData.eventQueue) as EventQueueHeader
+        this._lastSeenSeqNum = header.seqNum
+      }
+
       this._initialized = true
 
-      yield this._putInEnvelope(l3Snapshot, publish)
+      yield this._putInEnvelope(l3Snapshot, isInit)
     }
 
     if (this._initialized === false) {
