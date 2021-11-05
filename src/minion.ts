@@ -70,17 +70,24 @@ class Minion {
   private readonly _quotesSerialized: { [market: string]: string } = {}
   private readonly _marketNames: string[]
   private _listenSocket: any | undefined = undefined
+  private _openConnectionsCount = 0
+  private _tid: NodeJS.Timeout | undefined = undefined
 
   private MAX_BACKPRESSURE = 1024 * 1024
   constructor(private readonly _nodeEndpoint: string, private readonly _markets: SerumMarket[]) {
     this._marketNames = _markets.map((m) => m.name)
     this._server = this._initServer()
+
+    this._tid = setInterval(() => {
+      logger.log('info', `Open WS client connections count: ${this._openConnectionsCount}`, meta)
+    }, 60 * 1000)
   }
 
   private _initServer() {
     const apiPrefix = `/v${this._apiVersion}`
     const useSSL = process.env.KEY_FILE_NAME !== undefined
     const WsApp = useSSL ? SSLApp : App
+
     const options = useSSL
       ? {
           key_file_name: process.env.KEY_FILE_NAME,
@@ -96,6 +103,12 @@ class Minion {
         closeOnBackpressureLimit: true,
         message: (ws: any, message: any) => {
           this._handleSubscriptionRequest(ws, message)
+        },
+        open: () => {
+          this._openConnectionsCount++
+        },
+        close: () => {
+          this._openConnectionsCount--
         }
       } as any)
 
@@ -121,6 +134,10 @@ class Minion {
   public async stop() {
     if (this._listenSocket !== undefined) {
       us_listen_socket_close(this._listenSocket)
+    }
+
+    if (this._tid !== undefined) {
+      clearInterval(this._tid)
     }
   }
 
