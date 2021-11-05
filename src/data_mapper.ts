@@ -512,7 +512,7 @@ export class DataMapper {
       const price = key.ushrn(64)
 
       if (levels.length > 0 && levels[levels.length - 1]![0].eq(price)) {
-        levels[levels.length - 1]![1].iadd(quantity)
+        levels[levels.length - 1]![1] = levels[levels.length - 1]![1].add(quantity)
       } else {
         levels.push([price, quantity])
       }
