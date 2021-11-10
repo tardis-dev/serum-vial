@@ -125,7 +125,7 @@ export class DataMapper {
       this._bidsAccountOrders = newBidsOrders
     }
 
-    if (this._initialized && l3Diff.length > 0) {
+    if (this._initialized) {
       const diffIsValid = this._validateL3DiffCorrectness(l3Diff)
 
       if (diffIsValid === false) {
@@ -134,7 +134,8 @@ export class DataMapper {
           asksAccountExists: accountsData.asks !== undefined,
           bidsAccountExists: accountsData.bids !== undefined,
           eventQueueAccountExists: accountsData.eventQueue !== undefined,
-          slot
+          slot,
+          l3DiffLength: l3Diff.length
         })
 
         this._options.onPartitionDetected()
@@ -314,6 +315,10 @@ export class DataMapper {
       if (l3Diff.length === 0) {
         logger.log('warn', 'L2 diff without corresponding L3 diff', {
           market: this._options.symbol,
+          asksAccountExists: accountsData.asks !== undefined,
+          bidsAccountExists: accountsData.bids !== undefined,
+          eventQueueAccountExists: accountsData.eventQueue !== undefined,
+          slot,
           asksDiff,
           bidsDiff
         })
