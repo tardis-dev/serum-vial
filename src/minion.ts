@@ -79,7 +79,7 @@ class Minion {
     this._server = this._initServer()
 
     this._tid = setInterval(() => {
-      logger.log('info', `Open WS client connections count: ${this._openConnectionsCount}`, meta)
+      logger.log('debug', `Open WS client connections count: ${this._openConnectionsCount}`, meta)
     }, 60 * 1000)
   }
 
