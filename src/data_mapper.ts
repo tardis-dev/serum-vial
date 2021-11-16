@@ -126,6 +126,8 @@ export class DataMapper {
     }
 
     if (this._initialized) {
+      this._addOpenOrdersForImmediateMakerFills(l3Diff, timestamp, slot)
+
       const diffIsValid = this._validateL3DiffCorrectness(l3Diff)
 
       if (diffIsValid === false) {
@@ -423,6 +425,47 @@ export class DataMapper {
     }
   }
 
+  private _addOpenOrdersForImmediateMakerFills(
+    l3Diff: (Open | Fill | Done | Change)[],
+    timestamp: string,
+    slot: number
+  ) {
+    for (const item of l3Diff) {
+      // for maker fills check first if there's existing open order for it
+      // as it may not exist in scenario where order was added to the order book and matched in the same slot
+      if (item.type === 'fill' && item.maker === true) {
+        const openOrders = item.side === 'buy' ? this._bidsAccountOrders! : this._asksAccountOrders!
+        const hasMatchingOpenOrder = openOrders.some((o) => o.orderId === item.orderId)
+        if (hasMatchingOpenOrder === false) {
+          var openMessage: Open = {
+            type: 'open',
+            market: this._options.symbol,
+            timestamp,
+            slot,
+            version: this._version,
+            orderId: item.orderId,
+            clientId: item.clientId,
+            side: item.side,
+            price: item.price,
+            size: item.size,
+            account: item.account,
+            accountSlot: item.accountSlot,
+            feeTier: item.feeTier
+          }
+
+          const matchingL3Index = l3Diff.findIndex((i) => i.orderId === item.orderId)
+          // insert open order before first matching l3 index if it exists
+          if (matchingL3Index !== -1) {
+            l3Diff.splice(matchingL3Index, 0, openMessage)
+          } else {
+            // if there's not matching fill/done l3 add open order at the end
+            l3Diff.push(openMessage)
+          }
+        }
+      }
+    }
+  }
+
   public reset() {
     if (this._initialized === false) {
       return
@@ -470,6 +513,14 @@ export class DataMapper {
           ;(matchingOrder as any).size = (Number((matchingOrder as any).size) - Number(item.size)).toFixed(
             this._options.sizeDecimalPlaces
           )
+        } else if (item.maker === true) {
+          logger.log('warn', 'Maker fill without open message', {
+            market: this._options.symbol,
+            fill: item,
+            slot: item.slot
+          })
+
+          return false
         }
       }
 

@@ -642,7 +642,7 @@ Entire up-to-date order book snapshot with **all individual orders** pushed imme
 
 Pushed real-time for every new order opened on the limit order book (decoded from the `bids` and `asks` accounts).
 
-- **no** `open` messages are pushed for order that are filled or canceled immediately (in the same slot) - `ImmediateOrCancel` orders or orders that were open and filled in the same slot for example
+- **no** `open` messages are pushed for order that are filled or canceled immediately, for example - `ImmediateOrCancel` orders
 
 ```ts
 {
@@ -790,7 +790,7 @@ Pushed real-time when the order is no longer on the order book (decoded from the
 
 - there will be no more messages for this `orderId` after a `done` message
 
-- it can be pushed for orders that were never `open` in the order book in the first place (`ImmediateOrCancel` orders or orders that were open and filled in the same slot for example)
+- it can be pushed for orders that were never `open` in the order book in the first place (`ImmediateOrCancel` orders for example)
 
 - `price` and `sizeRemaining` fields are available only since v1.3.0 and only for canceled orders (`reason="canceled"`)
 
