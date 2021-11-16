@@ -77,14 +77,14 @@ export class DataMapper {
     const l3Diff: (Open | Fill | Done | Change)[] = []
 
     if (this._initialized && accountsData.eventQueue !== undefined) {
-      let fillsIds: string[] = []
+      let fillsIds: Map<string, Fill> = new Map()
       for (const event of this._getNewlyAddedEvents(accountsData.eventQueue)) {
         const message = this._mapEventToDataMessage(event, timestamp, slot, fillsIds)
         if (message === undefined) {
           continue
         }
         if (message.type === 'fill') {
-          fillsIds.push(message.orderId)
+          fillsIds.set(message.orderId, message)
         }
 
         l3Diff.push(message)
@@ -479,6 +479,33 @@ export class DataMapper {
       }
 
       if (item.type === 'done') {
+        if (item.reason === 'canceled') {
+          const matchingOrder = ordersMap.get(item.orderId)
+          if (matchingOrder !== undefined) {
+            if (matchingOrder.price !== item.price) {
+              logger.log('warn', 'Done(cancel) message with incorrect price', {
+                market: this._options.symbol,
+                doneMessage: item,
+                matchingOrder,
+                slot: item.slot
+              })
+
+              return false
+            }
+
+            if (matchingOrder.size !== item.sizeRemaining) {
+              logger.log('warn', 'Done(cancel) message with incorrect sizeRemaining', {
+                market: this._options.symbol,
+                doneMessage: item,
+                matchingOrder,
+                slot: item.slot
+              })
+
+              return false
+            }
+          }
+        }
+
         ordersMap.delete(item.orderId)
       }
     }
@@ -617,7 +644,7 @@ export class DataMapper {
     event: Event,
     timestamp: string,
     slot: number,
-    fillsIds: string[]
+    fillsIds: Map<string, Fill>
   ): Fill | Done | Change | undefined {
     const clientId = (event as any).clientOrderId ? (event as any).clientOrderId.toString() : undefined
 
@@ -649,7 +676,30 @@ export class DataMapper {
     } else if (event.nativeQuantityPaid.eqn(0)) {
       // we can use nativeQuantityPaid === 0 to detect if order is 'done'
       // this is what the dex uses at event processing time to decide if it can release the slot in an OpenOrders account.
-      // done means that there won't be any more messages for the order (is no longer in the order book or never was - cancelled, ioc)
+      // done means that there won't be any more messages for the order (is no longer in the order book or never was - canceled, ioc)
+
+      let reason
+      const localOpenOrders = side === 'buy' ? this._localBidsOrdersMap : this._localAsksOrdersMap
+
+      if (fillsIds.has(orderId)) {
+        if (localOpenOrders !== undefined && localOpenOrders.has(orderId)) {
+          const matchingOpenOrder = localOpenOrders.get(orderId)!
+
+          if (matchingOpenOrder.size !== fillsIds.get(orderId)!.size) {
+            // open order was filled but only partially and it's done now meaning it was canceled after a fill
+            reason = 'canceled' as const
+          } else {
+            // order was fully filled as open order size matches fill size
+            reason = 'filled' as const
+          }
+        } else {
+          // order was filled without matching open order meaning market order
+          reason = 'filled' as const
+        }
+      } else {
+        // no matching fill order means normal cancellation
+        reason = 'canceled' as const
+      }
 
       const doneMessage: Done = {
         type: 'done',
@@ -660,9 +710,15 @@ export class DataMapper {
         orderId,
         clientId,
         side,
-        reason: fillsIds.includes(orderId) ? 'filled' : 'canceled',
+        reason,
         account: openOrdersAccount,
-        accountSlot: openOrdersSlot
+        accountSlot: openOrdersSlot,
+        sizeRemaining:
+          reason === 'canceled' ? this._getDoneSize(event).toFixed(this._options.sizeDecimalPlaces) : undefined,
+        price:
+          reason === 'canceled'
+            ? this._options.market.priceLotsToNumber(event.orderId.ushrn(64)).toFixed(this._options.priceDecimalPlaces)
+            : undefined
       }
 
       return doneMessage
@@ -676,6 +732,18 @@ export class DataMapper {
       event.eventFlags.bid ? event.nativeQuantityReleased : event.nativeQuantityPaid,
       (this._options.market as any)._baseSplTokenMultiplier
     )
+  }
+
+  private _getDoneSize(event: Event) {
+    if (event.eventFlags.bid) {
+      return this._options.market.baseSizeLotsToNumber(
+        event.nativeQuantityReleased.div(
+          event.orderId.ushrn(64).mul((this._options.market as any)._decoded.quoteLotSize)
+        )
+      )
+    } else {
+      return divideBnToNumber(event.nativeQuantityReleased, (this._options.market as any)._baseSplTokenMultiplier)
+    }
   }
 
   private _getFillPrice(event: Event) {

@@ -642,7 +642,7 @@ Entire up-to-date order book snapshot with **all individual orders** pushed imme
 
 Pushed real-time for every new order opened on the limit order book (decoded from the `bids` and `asks` accounts).
 
-- no `open` messages are pushed for order that are filled or cancelled immediately (ImmediateOrCancel orders for example)
+- **no** `open` messages are pushed for order that are filled or canceled immediately (in the same slot) - `ImmediateOrCancel` orders or orders that were open and filled in the same slot for example
 
 ```ts
 {
@@ -790,7 +790,9 @@ Pushed real-time when the order is no longer on the order book (decoded from the
 
 - there will be no more messages for this `orderId` after a `done` message
 
-- it can be pushed for orders that were never 'open' in the order book in the first place (ImmediateOrCancel orders for example)
+- it can be pushed for orders that were never `open` in the order book in the first place (`ImmediateOrCancel` orders or orders that were open and filled in the same slot for example)
+
+- `price` and `sizeRemaining` fields are available only since v1.3.0 and only for canceled orders (`reason="canceled"`)
 
 ```ts
 {
@@ -803,6 +805,8 @@ Pushed real-time when the order is no longer on the order book (decoded from the
   "clientId": string,
   "side": "buy" | "sell",
   "reason" : "canceled" | "filled",
+  "price": string | undefined
+  "sizeRemaining": string | undefined
   "account": string,
   "accountSlot": number
 }
@@ -813,16 +817,18 @@ Pushed real-time when the order is no longer on the order book (decoded from the
 ```json
 {
   "type": "done",
-  "market": "BTC/USDC",
-  "timestamp": "2021-03-24T10:25:30.091Z",
-  "slot": 70564539,
+  "market": "SRM/USDC",
+  "timestamp": "2021-11-16T12:29:12.180Z",
+  "slot": 107165458,
   "version": 3,
-  "orderId": "10366018705012566564718169",
-  "clientId": "1616581504702049718",
-  "side": "sell",
+  "orderId": "117413526029161279193704",
+  "clientId": "4796015225289787768",
+  "side": "buy",
   "reason": "canceled",
-  "account": "6Yqus2UYf1wSaKBE4GSLeE2Ge225THeyPcgWBaoGzx3e",
-  "accountSlot": 9
+  "account": "AqeHe31ZUDgEUSidkh3gEhkf7iPn8bSTJ6c8L9ymp8Vj",
+  "accountSlot": 0,
+  "sizeRemaining": "508.5",
+  "price": "6.364"
 }
 ```
 
