@@ -792,8 +792,6 @@ Pushed real-time when the order is no longer on the order book (decoded from the
 
 - it can be pushed for orders that were never `open` in the order book in the first place (`ImmediateOrCancel` orders for example)
 
-- `price` and `sizeRemaining` fields are available only since v1.3.0 and only for canceled orders (`reason="canceled"`)
-
 ```ts
 {
   "type": "done",
@@ -805,8 +803,6 @@ Pushed real-time when the order is no longer on the order book (decoded from the
   "clientId": string,
   "side": "buy" | "sell",
   "reason" : "canceled" | "filled",
-  "price": string | undefined
-  "sizeRemaining": string | undefined
   "account": string,
   "accountSlot": number
 }
@@ -826,9 +822,7 @@ Pushed real-time when the order is no longer on the order book (decoded from the
   "side": "buy",
   "reason": "canceled",
   "account": "AqeHe31ZUDgEUSidkh3gEhkf7iPn8bSTJ6c8L9ymp8Vj",
-  "accountSlot": 0,
-  "sizeRemaining": "508.5",
-  "price": "6.364"
+  "accountSlot": 0
 }
 ```
 
