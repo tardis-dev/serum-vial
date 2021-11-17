@@ -430,6 +430,8 @@ export class DataMapper {
     timestamp: string,
     slot: number
   ) {
+    const openOrdersToAdd: Open[] = []
+
     for (const item of l3Diff) {
       // for maker fills check first if there's existing open order for it
       // as it may not exist in scenario where order was added to the order book and matched in the same slot
@@ -437,7 +439,7 @@ export class DataMapper {
         const openOrders = item.side === 'buy' ? this._bidsAccountOrders! : this._asksAccountOrders!
         const hasMatchingOpenOrder = openOrders.some((o) => o.orderId === item.orderId)
         if (hasMatchingOpenOrder === false) {
-          var openMessage: Open = {
+          const openMessage: Open = {
             type: 'open',
             market: this._options.symbol,
             timestamp,
@@ -453,15 +455,21 @@ export class DataMapper {
             feeTier: item.feeTier
           }
 
-          const matchingL3Index = l3Diff.findIndex((i) => i.orderId === item.orderId)
-          // insert open order before first matching l3 index if it exists
-          if (matchingL3Index !== -1) {
-            l3Diff.splice(matchingL3Index, 0, openMessage)
-          } else {
-            // if there's not matching fill/done l3 add open order at the end
-            l3Diff.push(openMessage)
-          }
+          openOrdersToAdd.push(openMessage)
         }
+      }
+    }
+
+    for (const openOrder of openOrdersToAdd) {
+      const matchingL3Index = l3Diff.findIndex(
+        (i) => i.type === 'fill' && i.maker === true && i.orderId === openOrder.orderId
+      )
+      // insert open order before first matching l3 index if it exists
+      if (matchingL3Index !== -1) {
+        l3Diff.splice(matchingL3Index, 0, openOrder)
+      } else {
+        // if there's not matching fill/done l3 add open order at the end
+        l3Diff.push(openOrder)
       }
     }
   }
@@ -530,33 +538,6 @@ export class DataMapper {
       }
 
       if (item.type === 'done') {
-        if (item.reason === 'canceled') {
-          const matchingOrder = ordersMap.get(item.orderId)
-          if (matchingOrder !== undefined) {
-            if (matchingOrder.price !== item.price) {
-              logger.log('warn', 'Done(cancel) message with incorrect price', {
-                market: this._options.symbol,
-                doneMessage: item,
-                matchingOrder,
-                slot: item.slot
-              })
-
-              return false
-            }
-
-            if (matchingOrder.size !== item.sizeRemaining) {
-              logger.log('warn', 'Done(cancel) message with incorrect sizeRemaining', {
-                market: this._options.symbol,
-                doneMessage: item,
-                matchingOrder,
-                slot: item.slot
-              })
-
-              return false
-            }
-          }
-        }
-
         ordersMap.delete(item.orderId)
       }
     }
@@ -764,14 +745,15 @@ export class DataMapper {
         reason,
         account: openOrdersAccount,
         accountSlot: openOrdersSlot,
-        sizeRemaining:
-          reason === 'canceled' ? this._getDoneSize(event).toFixed(this._options.sizeDecimalPlaces) : undefined,
-        price:
-          reason === 'canceled'
-            ? this._options.market.priceLotsToNumber(event.orderId.ushrn(64)).toFixed(this._options.priceDecimalPlaces)
-            : undefined
+        sizeRemaining: undefined,
+        price: undefined
+        // sizeRemaining:
+        //   reason === 'canceled' ? this._getDoneSize(event).toFixed(this._options.sizeDecimalPlaces) : undefined,
+        // price:
+        //   reason === 'canceled'
+        //     ? this._options.market.priceLotsToNumber(event.orderId.ushrn(64)).toFixed(this._options.priceDecimalPlaces)
+        //     : undefined
       }
-
       return doneMessage
     }
 
