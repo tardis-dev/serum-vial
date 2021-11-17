@@ -76,10 +76,64 @@ export class DataMapper {
 
     const l3Diff: (Open | Fill | Done | Change)[] = []
 
+    const newAsksSlabItems =
+      accountsData.asks !== undefined
+        ? [...Orderbook.decode(this._options.market, accountsData.asks).slab.items(false)]
+        : this._asksAccountSlabItems
+
+    const newAsksOrders =
+      accountsData.asks !== undefined && newAsksSlabItems !== undefined
+        ? newAsksSlabItems.map(this._mapAskSlabItemToOrder)
+        : this._asksAccountOrders
+
+    const newBidsSlabItems =
+      accountsData.bids !== undefined
+        ? [...Orderbook.decode(this._options.market, accountsData.bids).slab.items(true)]
+        : this._bidsAccountSlabItems
+
+    const newBidsOrders =
+      accountsData.bids !== undefined && newBidsSlabItems !== undefined
+        ? newBidsSlabItems.map(this._mapBidSlabItemToOrder)
+        : this._bidsAccountOrders
+
     if (this._initialized && accountsData.eventQueue !== undefined) {
       let fillsIds: Map<string, Fill> = new Map()
       for (const event of this._getNewlyAddedEvents(accountsData.eventQueue)) {
+        // for maker fills check first if there's existing open order for it
+        // as it may not exist in scenario where order was added to the order book and matched in the same slot
+
+        if (event.eventFlags.fill === true && event.eventFlags.maker === true) {
+          const makerFill: Fill = this._mapEventToDataMessage(event, timestamp, slot, fillsIds)! as Fill
+          const currentOpenOrders = makerFill.side === 'buy' ? newBidsOrders! : newAsksOrders!
+          const lastOpenOrders = makerFill.side === 'buy' ? this._bidsAccountOrders! : this._asksAccountOrders!
+
+          const hasMatchingOpenOrder =
+            currentOpenOrders.some((o) => o.orderId === makerFill.orderId) ||
+            lastOpenOrders.some((o) => o.orderId === makerFill.orderId)
+
+          if (hasMatchingOpenOrder === false) {
+            const openMessage: Open = {
+              type: 'open',
+              market: this._options.symbol,
+              timestamp,
+              slot,
+              version: this._version,
+              orderId: makerFill.orderId,
+              clientId: makerFill.clientId,
+              side: makerFill.side,
+              price: makerFill.price,
+              size: makerFill.size,
+              account: makerFill.account,
+              accountSlot: makerFill.accountSlot,
+              feeTier: makerFill.feeTier
+            }
+
+            l3Diff.push(openMessage)
+          }
+        }
+
         const message = this._mapEventToDataMessage(event, timestamp, slot, fillsIds)
+
         if (message === undefined) {
           continue
         }
@@ -92,13 +146,10 @@ export class DataMapper {
     }
 
     if (accountsData.asks !== undefined) {
-      const newAsksSlabItems = [...Orderbook.decode(this._options.market, accountsData.asks).slab.items(false)]
-      const newAsksOrders = newAsksSlabItems.map(this._mapAskSlabItemToOrder)
-
       if (this._initialized) {
         const currentAsksMap = new Map(this._asksAccountOrders!.map(this._toMapConstructorStructure))
 
-        for (const ask of newAsksOrders) {
+        for (const ask of newAsksOrders!) {
           const matchingExistingOrder = currentAsksMap.get(ask.orderId)
           this._addChangedOrderItemsToL3Diff(matchingExistingOrder, ask, timestamp, slot, l3Diff)
         }
@@ -109,13 +160,10 @@ export class DataMapper {
     }
 
     if (accountsData.bids !== undefined) {
-      const newBidsSlabItems = [...Orderbook.decode(this._options.market, accountsData.bids).slab.items(true)]
-      const newBidsOrders = newBidsSlabItems.map(this._mapBidSlabItemToOrder)
-
       if (this._initialized) {
         const currentBidsMap = new Map(this._bidsAccountOrders!.map(this._toMapConstructorStructure))
 
-        for (const bid of newBidsOrders) {
+        for (const bid of newBidsOrders!) {
           const matchingExistingOrder = currentBidsMap.get(bid.orderId)
           this._addChangedOrderItemsToL3Diff(matchingExistingOrder, bid, timestamp, slot, l3Diff)
         }
@@ -126,8 +174,6 @@ export class DataMapper {
     }
 
     if (this._initialized) {
-      this._addOpenOrdersForImmediateMakerFills(l3Diff, timestamp, slot)
-
       const diffIsValid = this._validateL3DiffCorrectness(l3Diff)
 
       if (diffIsValid === false) {
@@ -421,55 +467,6 @@ export class DataMapper {
       } else {
         // if there's not matching fill/done l3 add open order at the end
         l3Diff.push(changeMessage)
-      }
-    }
-  }
-
-  private _addOpenOrdersForImmediateMakerFills(
-    l3Diff: (Open | Fill | Done | Change)[],
-    timestamp: string,
-    slot: number
-  ) {
-    const openOrdersToAdd: Open[] = []
-
-    for (const item of l3Diff) {
-      // for maker fills check first if there's existing open order for it
-      // as it may not exist in scenario where order was added to the order book and matched in the same slot
-      if (item.type === 'fill' && item.maker === true) {
-        const openOrders = item.side === 'buy' ? this._bidsAccountOrders! : this._asksAccountOrders!
-        const hasMatchingOpenOrder = openOrders.some((o) => o.orderId === item.orderId)
-        if (hasMatchingOpenOrder === false) {
-          const openMessage: Open = {
-            type: 'open',
-            market: this._options.symbol,
-            timestamp,
-            slot,
-            version: this._version,
-            orderId: item.orderId,
-            clientId: item.clientId,
-            side: item.side,
-            price: item.price,
-            size: item.size,
-            account: item.account,
-            accountSlot: item.accountSlot,
-            feeTier: item.feeTier
-          }
-
-          openOrdersToAdd.push(openMessage)
-        }
-      }
-    }
-
-    for (const openOrder of openOrdersToAdd) {
-      const matchingL3Index = l3Diff.findIndex(
-        (i) => i.type === 'fill' && i.maker === true && i.orderId === openOrder.orderId
-      )
-      // insert open order before first matching l3 index if it exists
-      if (matchingL3Index !== -1) {
-        l3Diff.splice(matchingL3Index, 0, openOrder)
-      } else {
-        // if there's not matching fill/done l3 add open order at the end
-        l3Diff.push(openOrder)
       }
     }
   }
