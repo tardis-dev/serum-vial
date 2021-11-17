@@ -86,7 +86,6 @@ export interface Open extends DataMessage, OrderItem {
 export interface Done extends DataMessage {
   readonly type: 'done'
   readonly reason: 'filled' | 'canceled'
-  readonly price: string | undefined
   readonly sizeRemaining: string | undefined
   readonly side: 'buy' | 'sell'
   readonly orderId: string

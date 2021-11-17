@@ -535,6 +535,23 @@ export class DataMapper {
       }
 
       if (item.type === 'done') {
+        if (item.reason === 'canceled') {
+          const matchingOrder = ordersMap.get(item.orderId)
+          if (matchingOrder !== undefined) {
+            if (matchingOrder.size !== item.sizeRemaining) {
+              logger.log('warn', 'Done(cancel) message with incorrect sizeRemaining', {
+                market: this._options.symbol,
+                doneMessage: item,
+                matchingOrder,
+                slot: item.slot,
+                l3Diff
+              })
+
+              return false
+            }
+          }
+        }
+
         ordersMap.delete(item.orderId)
       }
     }
@@ -742,14 +759,8 @@ export class DataMapper {
         reason,
         account: openOrdersAccount,
         accountSlot: openOrdersSlot,
-        sizeRemaining: undefined,
-        price: undefined
-        // sizeRemaining:
-        //   reason === 'canceled' ? this._getDoneSize(event).toFixed(this._options.sizeDecimalPlaces) : undefined,
-        // price:
-        //   reason === 'canceled'
-        //     ? this._options.market.priceLotsToNumber(event.orderId.ushrn(64)).toFixed(this._options.priceDecimalPlaces)
-        //     : undefined
+        sizeRemaining:
+          reason === 'canceled' ? this._getDoneSize(event).toFixed(this._options.sizeDecimalPlaces) : undefined
       }
       return doneMessage
     }
