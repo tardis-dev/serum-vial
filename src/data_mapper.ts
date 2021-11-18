@@ -546,8 +546,6 @@ export class DataMapper {
                 slot: item.slot,
                 l3Diff
               })
-
-              return false
             }
           }
         }
