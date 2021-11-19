@@ -174,7 +174,7 @@ export class DataMapper {
     }
 
     if (this._initialized) {
-      const diffIsValid = this._validateL3DiffCorrectness(l3Diff)
+      const diffIsValid = this._validateL3DiffCorrectness(l3Diff, slot)
 
       if (diffIsValid === false) {
         logger.log('warn', 'PartitionDetected: invalid l3diff', {
@@ -361,7 +361,7 @@ export class DataMapper {
 
     if (asksDiff.length > 0 || bidsDiff.length > 0) {
       if (l3Diff.length === 0) {
-        logger.log('warn', 'L2 diff without corresponding L3 diff', {
+        logger.log('warn', 'PartitionDetected: L2 diff without corresponding L3 diff', {
           market: this._options.symbol,
           asksAccountExists: accountsData.asks !== undefined,
           bidsAccountExists: accountsData.bids !== undefined,
@@ -370,6 +370,10 @@ export class DataMapper {
           asksDiff,
           bidsDiff
         })
+
+        this._options.onPartitionDetected()
+
+        return
       }
 
       // since we have a diff it means snapshot has changed
@@ -486,7 +490,7 @@ export class DataMapper {
     this._currentQuote = undefined
   }
 
-  private _validateL3DiffCorrectness(l3Diff: (Open | Fill | Done | Change)[]) {
+  private _validateL3DiffCorrectness(l3Diff: (Open | Fill | Done | Change)[], slot: number) {
     // first make sure we have initial snapshots to apply diffs to
 
     if (this._localAsksOrdersMap === undefined && this._localBidsOrdersMap === undefined) {
@@ -495,7 +499,6 @@ export class DataMapper {
 
       return true
     }
-
     for (const item of l3Diff) {
       const ordersMap = (item.side === 'buy' ? this._localBidsOrdersMap : this._localAsksOrdersMap)!
       if (item.type === 'open') {
@@ -522,7 +525,7 @@ export class DataMapper {
           logger.log('warn', 'Maker fill without open message', {
             market: this._options.symbol,
             fill: item,
-            slot: item.slot
+            slot
           })
 
           return false
@@ -535,26 +538,18 @@ export class DataMapper {
       }
 
       if (item.type === 'done') {
-        if (item.reason === 'canceled') {
-          const matchingOrder = ordersMap.get(item.orderId)
-          if (matchingOrder !== undefined) {
-            if (matchingOrder.size !== item.sizeRemaining) {
-              logger.log('warn', 'Done(cancel) message with incorrect sizeRemaining', {
-                market: this._options.symbol,
-                doneMessage: item,
-                matchingOrder,
-                slot: item.slot,
-                l3Diff
-              })
-            }
-          }
-        }
-
         ordersMap.delete(item.orderId)
       }
     }
 
     if (this._bidsAccountOrders!.length !== this._localBidsOrdersMap!.size) {
+      logger.log('warn', 'Bids orders count do not match', {
+        market: this._options.symbol,
+        currentBidsCount: this._bidsAccountOrders!.length,
+        localBidsCount: this._localBidsOrdersMap!.size,
+        slot
+      })
+
       return false
     }
 
@@ -565,11 +560,25 @@ export class DataMapper {
         matchingLocalBid.price !== bid.price ||
         matchingLocalBid.size !== bid.size
       ) {
+        logger.log('warn', 'Bid order do not match', {
+          market: this._options.symbol,
+          localBid: matchingLocalBid,
+          currentBid: bid,
+          slot
+        })
+
         return false
       }
     }
 
     if (this._asksAccountOrders!.length !== this._localAsksOrdersMap!.size) {
+      logger.log('warn', 'Asks orders count do not match', {
+        market: this._options.symbol,
+        currentAsksCount: this._asksAccountOrders!.length,
+        localAsksCount: this._localAsksOrdersMap!.size,
+        slot
+      })
+
       return false
     }
 
@@ -580,6 +589,13 @@ export class DataMapper {
         matchingLocalAsk.price !== ask.price ||
         matchingLocalAsk.size !== ask.size
       ) {
+        logger.log('warn', 'Bid order do not match', {
+          market: this._options.symbol,
+          localAsk: matchingLocalAsk,
+          currentAsk: ask,
+          slot
+        })
+
         return false
       }
     }
