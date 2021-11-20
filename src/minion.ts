@@ -320,7 +320,9 @@ class Minion {
               })
             }
           } else {
-            ws.unsubscribe(topic)
+            if (ws.isSubscribed(topic)) {
+              ws.unsubscribe(topic)
+            }
           }
         }
       }
