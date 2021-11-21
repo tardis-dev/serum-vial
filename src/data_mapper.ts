@@ -76,6 +76,9 @@ export class DataMapper {
 
     const l3Diff: (Open | Fill | Done | Change)[] = []
 
+    const currentAsksAccountOrders = this._asksAccountOrders
+    const currentBidsAccountOrders = this._bidsAccountOrders
+
     const newAsksSlabItems =
       accountsData.asks !== undefined
         ? [...Orderbook.decode(this._options.market, accountsData.asks).slab.items(false)]
@@ -183,7 +186,11 @@ export class DataMapper {
           bidsAccountExists: accountsData.bids !== undefined,
           eventQueueAccountExists: accountsData.eventQueue !== undefined,
           slot,
-          l3DiffLength: l3Diff.length
+          currentAsksAccountOrders,
+          currentBidsAccountOrders,
+          newAsksOrders,
+          newBidsOrders,
+          l3Diff
         })
 
         this._options.onPartitionDetected()
