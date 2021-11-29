@@ -112,23 +112,33 @@ export class DataMapper {
             lastOpenOrders.some((o) => o.orderId === makerFill.orderId)
 
           if (hasMatchingOpenOrder === false) {
-            const openMessage: Open = {
-              type: 'open',
-              market: this._options.symbol,
-              timestamp,
-              slot,
-              version: this._version,
-              orderId: makerFill.orderId,
-              clientId: makerFill.clientId,
-              side: makerFill.side,
-              price: makerFill.price,
-              size: makerFill.size,
-              account: makerFill.account,
-              accountSlot: makerFill.accountSlot,
-              feeTier: makerFill.feeTier
-            }
+            const matchingOpenOrder = l3Diff.find((l) => l.orderId === makerFill.orderId && l.type === 'open')
 
-            l3Diff.push(openMessage)
+            if (matchingOpenOrder !== undefined) {
+              // check if we've already added an open order to the l3Diff as single maker order that was
+              // matched in the same slot could be matched by multiple fills
+              ;(matchingOpenOrder as any).size = (
+                Number(makerFill.size) + Number((matchingOpenOrder as any).size)
+              ).toFixed(this._options.sizeDecimalPlaces)
+            } else {
+              const openMessage: Open = {
+                type: 'open',
+                market: this._options.symbol,
+                timestamp,
+                slot,
+                version: this._version,
+                orderId: makerFill.orderId,
+                clientId: makerFill.clientId,
+                side: makerFill.side,
+                price: makerFill.price,
+                size: makerFill.size,
+                account: makerFill.account,
+                accountSlot: makerFill.accountSlot,
+                feeTier: makerFill.feeTier
+              }
+
+              l3Diff.push(openMessage)
+            }
           }
         }
 
