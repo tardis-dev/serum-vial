@@ -322,13 +322,12 @@ export class DataMapper {
     const bidsDiff =
       accountsData.bids !== undefined ? this._getL2Diff(this._currentL2Snapshot.bids, newL2Snapshot.bids) : []
 
-    if (l3Diff.length > 0) {
+    // publish l3Diff only if full l3 snapshot was not requested
+    if (l3Diff.length > 0 && this._l3SnapshotPublishRequested === false) {
       for (let i = 0; i < l3Diff.length; i++) {
         const message = l3Diff[i]!
 
-        if (this._l3SnapshotPublishRequested === false) {
-          yield this._putInEnvelope(message, true)
-        }
+        yield this._putInEnvelope(message, true)
 
         // detect l2 trades based on fills
         if (message.type === 'fill' && message.maker === false) {
