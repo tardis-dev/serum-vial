@@ -91,7 +91,6 @@ export const serumProducerReadyChannel = new BroadcastChannel('SerumProducerRead
 export const serumDataChannel = new BroadcastChannel('SerumData') as BroadcastChannel
 export const serumMarketsChannel = new BroadcastChannel('SerumMarkets') as BroadcastChannel
 export const cleanupChannel = new BroadcastChannel('Cleanup') as BroadcastChannel
-export const partitionDetectedChannel = new BroadcastChannel('PartitionDetected') as BroadcastChannel
 
 export async function executeAndRetry<T>(
   operation: (attempt: number) => Promise<T>,

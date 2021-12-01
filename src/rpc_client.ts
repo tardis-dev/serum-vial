@@ -9,7 +9,6 @@ import { logger } from './logger'
 
 // simple solana RPC client
 export class RPCClient {
-  private _accountsChangeNotifications: AccountsChangeNotifications | undefined = undefined
   constructor(
     private readonly _options: {
       readonly nodeEndpoint: string
@@ -38,11 +37,11 @@ export class RPCClient {
       commitment: this._options.commitment
     }
 
-    this._accountsChangeNotifications = new AccountsChangeNotifications(market, options)
+    const accountsChangeNotifications = new AccountsChangeNotifications(market, options)
 
     logger.log('info', 'Starting RPC client', options)
 
-    this._accountsChangeNotifications.onAccountsChange = (notification) => {
+    accountsChangeNotifications.onAccountsChange = (notification) => {
       notificationsStream.write(notification)
     }
 
@@ -51,13 +50,7 @@ export class RPCClient {
         yield notification as AccountsNotification
       }
     } finally {
-      this._accountsChangeNotifications.dispose()
-    }
-  }
-
-  public reset() {
-    if (this._accountsChangeNotifications !== undefined) {
-      this._accountsChangeNotifications.reset()
+      accountsChangeNotifications.dispose()
     }
   }
 
@@ -159,7 +152,6 @@ export class RPCClient {
 class AccountsChangeNotifications {
   private _currentSlot: number | undefined = undefined
   private _state: 'PRISTINE' | 'PENDING' | 'PUBLISHED' = 'PRISTINE'
-  private _fullyInitialized = false
   private _accountsData: AccountsData = {
     asks: undefined,
     bids: undefined,
@@ -217,63 +209,6 @@ class AccountsChangeNotifications {
     this._disposed = true
   }
 
-  public async reset() {
-    this._resetPendingNotificationState()
-
-    while (true) {
-      await wait(1500)
-
-      if (this._fullyInitialized) {
-        return
-      }
-
-      const { accountsData, slot } = await executeAndRetry(async () => this._fetchAccountsSnapshot(), {
-        maxRetries: 10
-      })
-
-      if (this._fullyInitialized) {
-        return
-      }
-
-      // after reset when there were no updates via WS or
-      // if the last WS update was for older slot, let's init account with data from REST API
-
-      if (this._currentSlot === undefined || this._currentSlot < slot) {
-        logger.log('debug', 'Reset with REST accounts info...', { market: this._options.marketName, slot })
-
-        this._update('asks', accountsData.asks!, slot)
-        this._update('bids', accountsData.bids!, slot)
-        this._update('eventQueue', accountsData.eventQueue!, slot)
-
-        return
-      }
-
-      // after reset we received some WS updates but not for all accounts
-      // let's update account for which we did not receive updates
-      if (this._currentSlot === slot && this._state === 'PENDING') {
-        logger.log('debug', 'Reset with some REST accounts info...', {
-          market: this._options.marketName,
-          slot,
-          currentSlot: this._currentSlot
-        })
-
-        if (this._accountsData.asks === undefined) {
-          this._update('asks', accountsData.asks!, slot)
-        }
-
-        if (this._accountsData.bids === undefined) {
-          this._update('bids', accountsData.bids!, slot)
-        }
-
-        if (this._accountsData.eventQueue === undefined) {
-          this._update('eventQueue', accountsData.eventQueue!, slot)
-        }
-
-        return
-      }
-    }
-  }
-
   private _connectAndStreamData() {
     if (this._disposed) {
       return
@@ -298,8 +233,7 @@ class AccountsChangeNotifications {
 
         this.onAccountsChange({
           accountsData,
-          slot,
-          reset: false
+          slot
         })
 
         this._currentSlot = slot
@@ -461,8 +395,6 @@ class AccountsChangeNotifications {
   }
 
   private async _restartConnection() {
-    this.onAccountsChange({ reset: true })
-
     const delayMs = this._retriesCount > 0 ? Math.min(Math.pow(2, this._retriesCount) * 1000, 32 * 1000) : 0
 
     logger.log('info', 'Restarting RPC WebSocket connection...', { market: this._options.marketName, delayMs })
@@ -502,7 +434,6 @@ class AccountsChangeNotifications {
     this._slotStartTimestamp = undefined
     this._currentSlot = undefined
     this._state = 'PRISTINE'
-    this._fullyInitialized = false
   }
 
   private _subscribeToAccountsNotifications(ws: WebSocket) {
@@ -594,13 +525,8 @@ class AccountsChangeNotifications {
 
     this.onAccountsChange({
       accountsData: this._accountsData,
-      slot: this._currentSlot!,
-      reset: false
+      slot: this._currentSlot!
     })
-
-    if (this._fullyInitialized === false) {
-      this._fullyInitialized = this._receivedDataForAllAccounts()
-    }
 
     // clear pending accounts data
     this._accountsData = {
@@ -648,8 +574,6 @@ class AccountsChangeNotifications {
     if (this._publishTID !== undefined) {
       clearTimeout(this._publishTID)
     }
-    // and notify about reset
-    this.onAccountsChange({ reset: true })
   }
 
   private _update(accountName: 'bids' | 'asks' | 'eventQueue', accountData: Buffer, slot: number) {
@@ -724,16 +648,11 @@ class AccountsChangeNotifications {
   }
 }
 
-export type AccountsNotification =
-  | {
-      readonly reset: true
-    }
-  | AccountsNotificationPayload
+export type AccountsNotification = AccountsNotificationPayload
 
 export type AccountsNotificationPayload = {
   readonly accountsData: AccountsData
   readonly slot: number
-  readonly reset: false
 }
 export type AccountName = 'bids' | 'asks' | 'eventQueue'
 export type AccountsData = {

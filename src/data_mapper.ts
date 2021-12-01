@@ -36,6 +36,7 @@ export class DataMapper {
 
   private _initialized = false
   private _lastSeenSeqNum: number | undefined = undefined
+  private _l3SnapshotPublishRequested = false
 
   private _currentL2Snapshot:
     | {
@@ -62,7 +63,6 @@ export class DataMapper {
       readonly market: Market
       readonly priceDecimalPlaces: number
       readonly sizeDecimalPlaces: number
-      readonly onPartitionDetected: () => void
     }
   ) {
     this._version = getLayoutVersion(this._options.market.programId) as number
@@ -187,7 +187,7 @@ export class DataMapper {
       const diffIsValid = this._validateL3DiffCorrectness(l3Diff, slot)
 
       if (diffIsValid === false) {
-        logger.log('warn', 'PartitionDetected: invalid l3diff', {
+        logger.log('warn', 'Invalid l3diff', {
           market: this._options.symbol,
           asksAccountExists: accountsData.asks !== undefined,
           bidsAccountExists: accountsData.bids !== undefined,
@@ -196,9 +196,7 @@ export class DataMapper {
           l3Diff
         })
 
-        this._options.onPartitionDetected()
-
-        return
+        this._l3SnapshotPublishRequested = true
       }
     }
 
@@ -209,7 +207,7 @@ export class DataMapper {
     const snapshotHasChanged =
       this._initialized === true && (accountsData.asks !== undefined || accountsData.bids !== undefined)
 
-    if (shouldInitialize || snapshotHasChanged) {
+    if (shouldInitialize || snapshotHasChanged || this._l3SnapshotPublishRequested) {
       const l3Snapshot: L3Snapshot = {
         type: 'l3snapshot',
         market: this._options.symbol,
@@ -230,7 +228,16 @@ export class DataMapper {
 
       this._initialized = true
 
-      yield this._putInEnvelope(l3Snapshot, isInit)
+      const publishL3Snapshot = isInit || this._l3SnapshotPublishRequested
+
+      if (this._l3SnapshotPublishRequested) {
+        logger.log('warn', 'Publishing full l3 snapshot as requested...', {
+          market: this._options.symbol,
+          slot
+        })
+      }
+
+      yield this._putInEnvelope(l3Snapshot, publishL3Snapshot)
     }
 
     if (this._initialized === false) {
@@ -298,15 +305,11 @@ export class DataMapper {
       Number(newL2Snapshot.bids[0]![0]) >= Number(newL2Snapshot.asks[0]![0])
 
     if (bookIsCrossed) {
-      logger.log('warn', 'PartitionDetected: crossed L2 book', {
+      logger.log('warn', 'Crossed L2 book', {
         market: this._options.symbol,
         quote: newQuote,
         slot
       })
-
-      this._options.onPartitionDetected()
-
-      return
     }
 
     const asksDiff =
@@ -319,7 +322,9 @@ export class DataMapper {
       for (let i = 0; i < l3Diff.length; i++) {
         const message = l3Diff[i]!
 
-        yield this._putInEnvelope(message, true)
+        if (this._l3SnapshotPublishRequested === false) {
+          yield this._putInEnvelope(message, true)
+        }
 
         // detect l2 trades based on fills
         if (message.type === 'fill' && message.maker === false) {
@@ -369,9 +374,12 @@ export class DataMapper {
       }
     }
 
+    // we've published new l3snapshot so let's reset the flag
+    this._l3SnapshotPublishRequested = false
+
     if (asksDiff.length > 0 || bidsDiff.length > 0) {
       if (l3Diff.length === 0) {
-        logger.log('warn', 'PartitionDetected: L2 diff without corresponding L3 diff', {
+        logger.log('warn', 'L2 diff without corresponding L3 diff', {
           market: this._options.symbol,
           asksAccountExists: accountsData.asks !== undefined,
           bidsAccountExists: accountsData.bids !== undefined,
@@ -381,9 +389,8 @@ export class DataMapper {
           bidsDiff
         })
 
-        this._options.onPartitionDetected()
-
-        return
+        // when next account update will come instead of providing l3diff we'll publish full l3 snapshot
+        this._l3SnapshotPublishRequested = true
       }
 
       // since we have a diff it means snapshot has changed
@@ -483,21 +490,6 @@ export class DataMapper {
         l3Diff.push(changeMessage)
       }
     }
-  }
-
-  public reset() {
-    if (this._initialized === false) {
-      return
-    }
-
-    this._initialized = false
-    this._lastSeenSeqNum = undefined
-    this._bidsAccountOrders = undefined
-    this._asksAccountOrders = undefined
-    this._localBidsOrdersMap = undefined
-    this._localAsksOrdersMap = undefined
-    this._currentL2Snapshot = undefined
-    this._currentQuote = undefined
   }
 
   private _validateL3DiffCorrectness(l3Diff: (Open | Fill | Done | Change)[], slot: number) {

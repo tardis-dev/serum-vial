@@ -61,16 +61,8 @@ export class SerumProducer {
       symbol: this._options.marketName,
       market,
       priceDecimalPlaces,
-      sizeDecimalPlaces,
-      onPartitionDetected: () => {
-        partitionDetectedChannel.postMessage('partition-detected')
-        rpcClient.reset()
-      }
+      sizeDecimalPlaces
     })
-
-    partitionDetectedChannel.onmessage = () => {
-      rpcClient.reset()
-    }
 
     for await (const notification of rpcClient.streamAccountsNotification(market, this._options.marketName)) {
       if (started === false) {
@@ -79,13 +71,10 @@ export class SerumProducer {
         serumProducerReadyChannel.postMessage('ready')
       }
 
-      if (notification.reset) {
-        dataMapper.reset()
-      } else {
-        const messagesForSlot = [...dataMapper.map(notification)]
-        if (messagesForSlot.length > 0) {
-          onData(messagesForSlot)
-        }
+      const messagesForSlot = [...dataMapper.map(notification)]
+
+      if (messagesForSlot.length > 0) {
+        onData(messagesForSlot)
       }
     }
   }
