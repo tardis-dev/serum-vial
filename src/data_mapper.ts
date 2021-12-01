@@ -231,6 +231,10 @@ export class DataMapper {
       const publishL3Snapshot = isInit || this._l3SnapshotPublishRequested
 
       if (this._l3SnapshotPublishRequested) {
+        // reset local accounts info
+        this._localAsksOrdersMap = new Map(this._asksAccountOrders!.map(this._toMapConstructorStructure))
+        this._localBidsOrdersMap = new Map(this._bidsAccountOrders!.map(this._toMapConstructorStructure))
+
         logger.log('warn', 'Publishing full l3 snapshot as requested...', {
           market: this._options.symbol,
           slot
