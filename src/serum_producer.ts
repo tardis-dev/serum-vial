@@ -64,6 +64,25 @@ export class SerumProducer {
       sizeDecimalPlaces
     })
 
+    let start = process.hrtime()
+    const interval = 600
+
+    // based on https://github.com/tj/node-blocked/blob/master/index.js
+    setInterval(() => {
+      const delta = process.hrtime(start)
+      const nanosec = delta[0] * 1e9 + delta[1]
+      const ms = nanosec / 1e6
+      const n = ms - interval
+
+      if (n > 200) {
+        logger.log('info', `Event loop blocked for ${Math.round(n)} ms.`, {
+          market: this._options.marketName
+        })
+      }
+
+      start = process.hrtime()
+    }, interval).unref()
+
     for await (const notification of rpcClient.streamAccountsNotification(market, this._options.marketName)) {
       if (started === false) {
         logger.log('info', `Serum producer started for ${this._options.marketName} market...`)

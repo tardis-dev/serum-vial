@@ -28,7 +28,7 @@ export async function bootServer({
 
   for (let i = 0; i < MINIONS_COUNT; i++) {
     const minionWorker = new Worker(path.resolve(__dirname, 'minion.js'), {
-      workerData: { nodeEndpoint, port, markets }
+      workerData: { nodeEndpoint, port, markets, minionNumber: i }
     })
 
     minionWorker.on('error', (err) => {

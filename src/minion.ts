@@ -430,12 +430,33 @@ class Minion {
   }
 }
 
-const { port, nodeEndpoint, markets } = workerData as { port: number; nodeEndpoint: string; markets: SerumMarket[] }
+const { port, nodeEndpoint, markets, minionNumber } = workerData as {
+  port: number
+  nodeEndpoint: string
+  markets: SerumMarket[]
+  minionNumber: number
+}
 
 const minion = new Minion(nodeEndpoint, markets)
 
+let lastPublishTimestamp = new Date()
+
+if (minionNumber === 0) {
+  setInterval(() => {
+    const noDataPublishedForSeconds = (new Date().valueOf() - lastPublishTimestamp.valueOf()) / 1000
+    if (noDataPublishedForSeconds > 30) {
+      logger.log('info', `No market data published for prolonged time`, {
+        lastPublishTimestamp: lastPublishTimestamp.toISOString(),
+        noDataPublishedForSeconds
+      })
+    }
+  }, 15 * 1000).unref()
+}
+
 minion.start(port).then(() => {
   serumDataChannel.onmessage = (message) => {
+    lastPublishTimestamp = new Date()
+
     minion.processMessages(message.data)
   }
 
