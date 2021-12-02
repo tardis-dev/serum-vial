@@ -39,7 +39,7 @@
   "license": "MPL-2.0",
   "dependencies": {
     "@project-serum/serum": "^0.13.60",
-    "@solana/web3.js": "^1.30.2",
+    "@solana/web3.js": "^1.31.0",
     "@types/bintrees": "^1.0.3",
     "@types/bn.js": "^5.1.0",
     "abort-controller": "^3.0.0",
@@ -50,19 +50,19 @@
     "node-fetch": "^2.6.1",
     "uWebSockets.js": "git+https://git@github.com/uNetworking/uWebSockets.js.git#v20.4.0",
     "winston": "^3.3.3",
-    "ws": "^8.2.3",
-    "yargs": "^17.2.1"
+    "ws": "^8.3.0",
+    "yargs": "^17.3.0"
   },
   "devDependencies": {
     "@types/jest": "^27.0.3",
-    "@types/node": "^16.11.9",
+    "@types/node": "^16.11.11",
     "@types/node-fetch": "^2.5.12",
-    "@types/ws": "^8.2.0",
+    "@types/ws": "^8.2.1",
     "cross-var": "^1.1.0",
     "husky": "^7.0.4",
-    "jest": "^27.3.1",
-    "lint-staged": "^11.2.6",
-    "prettier": "^2.4.1",
+    "jest": "^27.4.3",
+    "lint-staged": "^12.1.2",
+    "prettier": "^2.5.0",
     "ts-jest": "^27.0.7",
     "typescript": "^4.5.2"
   },
