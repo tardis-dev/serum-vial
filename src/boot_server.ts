@@ -75,7 +75,7 @@ export async function bootServer({
     })
 
     // just in case to not get hit by serum RPC node rate limits...
-    await wait(1000)
+    await wait(100)
   }
 
   await new Promise<void>(async (resolve) => {
