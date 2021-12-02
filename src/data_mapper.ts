@@ -682,9 +682,36 @@ export class DataMapper {
     return false
   }
 
+  private _priceStringCache: Map<string, string> = new Map()
+  private _sizeStringCache: Map<string, string> = new Map()
+
+  private _getPriceAsString(priceBN: BN) {
+    let priceString = this._priceStringCache.get(priceBN.toString())
+
+    if (priceString === undefined) {
+      priceString = this._options.market.priceLotsToNumber(priceBN).toFixed(this._options.priceDecimalPlaces)
+
+      this._priceStringCache.set(priceBN.toString(), priceString)
+    }
+
+    return priceString
+  }
+
+  private _getSizeAsString(sizeBN: BN) {
+    let sizeString = this._sizeStringCache.get(sizeBN.toString())
+
+    if (sizeString === undefined) {
+      sizeString = this._options.market.baseSizeLotsToNumber(sizeBN).toFixed(this._options.sizeDecimalPlaces)
+
+      this._sizeStringCache.set(sizeBN.toString(), sizeString)
+    }
+
+    return sizeString
+  }
+
   private _mapToL2Level = (level: [BN, BN]): PriceLevel => {
-    const price = this._options.market.priceLotsToNumber(level[0]).toFixed(this._options.priceDecimalPlaces)
-    const size = this._options.market.baseSizeLotsToNumber(level[1]).toFixed(this._options.sizeDecimalPlaces)
+    const price = this._getPriceAsString(level[0])
+    const size = this._getSizeAsString(level[1])
 
     return [price, size]
   }
@@ -890,14 +917,15 @@ export class DataMapper {
     { key, clientOrderId, feeTier, ownerSlot, owner, quantity }: SlabItem,
     isBids: boolean
   ) => {
-    const price = key.ushrn(64)
+    const price = this._getPriceAsString(key.ushrn(64))
+    const size = this._getSizeAsString(quantity)
 
     const orderItem: OrderItem = {
       orderId: key.toString(),
       clientId: clientOrderId.toString(),
       side: isBids ? 'buy' : 'sell',
-      price: this._options.market.priceLotsToNumber(price).toFixed(this._options.priceDecimalPlaces),
-      size: this._options.market.baseSizeLotsToNumber(quantity).toFixed(this._options.sizeDecimalPlaces),
+      price,
+      size,
       account: owner.toBase58(),
       accountSlot: ownerSlot,
       feeTier
