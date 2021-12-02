@@ -215,8 +215,9 @@ class AccountsChangeNotifications {
     }
 
     const ws = new WebSocket(this._options.nodeWsEndpoint, {
-      handshakeTimeout: 15 * 1000
-    })
+      handshakeTimeout: 15 * 1000,
+      skipUTF8Validation: true
+    } as any)
 
     ws.onopen = async () => {
       try {
