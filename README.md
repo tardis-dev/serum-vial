@@ -37,7 +37,7 @@ Both [serum-rest-server](https://github.com/project-serum/serum-rest-server) and
 Run the code snippet below in the browser Dev Tools directly or in Node.js (requires installation of `ws` lib, [see](https://runkit.com/thad/serum-vial-node-js-sample)).
 
 ```js
-// connect to hosted demo server
+// connect to hosted server
 const ws = new WebSocket('wss://api.serum-vial.dev/v1/ws')
 // if connecting to serum-vial server running locally
 // const ws = new WebSocket('ws://localhost:8000/v1/ws')
@@ -70,9 +70,9 @@ ws.onopen = () => {
 <br/>
 <br/>
 
-## Demo
+## Using public hosted server
 
-Serum-vial demo WebSocket server backed by [locally running Solana RPC node](https://docs.solana.com/running-validator) is available at:
+Serum-vial public hosted WebSocket server (backed by Project Serum RPC node) is available at:
 
 <br/>
 
@@ -80,7 +80,11 @@ Serum-vial demo WebSocket server backed by [locally running Solana RPC node](htt
 
 <br/>
 
-Serum DEX UI backed by serum-vial demo WebSocket server for it's trade and order book data feeds is available at:
+This public server is maintained on best effort basis.
+
+<br/>
+
+Serum DEX UI backed by this public server (for it's trade and order book data feeds) is available at:
 
 <br/>
 
@@ -88,11 +92,11 @@ Serum DEX UI backed by serum-vial demo WebSocket server for it's trade and order
 
 <br/>
 
-Since by default serum-vial uses [`confirmed` commitment level](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment) for getting accounts notification from RPC node, it may sometimes feel slightly slower when it comes to order book updates vs default DEX UI which uses [`recent/processed` commitment](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment).
+Since by default serum-vial uses [`confirmed` commitment level](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment) for getting accounts notification from RPC node, it may sometimes feel slightly slower when it comes to order book updates vs default DEX UI which uses [`recent/processed` commitment](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment), but data is more accurate on the other hand.
 
-Trade data is provided faster since by default DEX UI is pooling `eventQueue` account data on interval due to it's size (> 1MB), and serum-vial uses real-time `eventQueue` account notification as a source for trade messages which aren't delayed by pooling interval time.
+Trade data is published faster since by default DEX UI is pooling `eventQueue` account data on interval due to it's size (> 1MB), and serum-vial uses real-time `eventQueue` account notification as a source for trade messages which aren't delayed by pooling interval time.
 
-[![See demo](https://img.shields.io/badge/-See%20Demo%20DEX%20UI-c?color=05aac5)](https://serum-vial.dev/)
+[![See serum-vial backed DEX](https://img.shields.io/badge/-See%20Demo%20DEX%20UI-c?color=05aac5)](https://serum-vial.dev/)
 
 <br/>
 <br/>
@@ -204,7 +208,7 @@ WebSocket API provides real-time market data feeds of Serum DEX and uses a bidir
 
 - **[ws://localhost:8000/v1/ws](ws://localhost:8000/v1/ws)** - assuming serum-vial runs locally on default port without SSL enabled
 
-- **[wss://api.serum-vial.dev/v1/ws](wss://api.serum-vial.dev/v1/ws)** - demo serum-vial server endpoint
+- **[wss://api.serum-vial.dev/v1/ws](wss://api.serum-vial.dev/v1/ws)** - hosted serum-vial server endpoint
 
 <br/>
 
@@ -847,7 +851,7 @@ Returns Serum DEX markets list supported by serum-vial instance (it can be updat
 
 - [http://localhost:8000/v1/markets](http://localhost:8000/v1/markets) - assuming serum-vial runs locally on default port without SSL enabled
 
-- [https://api.serum-vial.dev/v1/markets](https://api.serum-vial.dev/v1/markets) - demo serum-vial server endpoint
+- [https://api.serum-vial.dev/v1/markets](https://api.serum-vial.dev/v1/markets) - hosted serum-vial server endpoint
 
 <br/>
 
