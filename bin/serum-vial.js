@@ -52,6 +52,12 @@ const argv = yargs
     default: 'confirmed'
   })
 
+  .option('boot-delay', {
+    type: 'string',
+    describe: 'Staggered boot delay in milliseconds so public RPC nodes do not rate limit serum-vial',
+    default: 100
+  })
+
   .option('markets-json', {
     type: 'string',
     describe: 'Path to custom market.json definition file',
@@ -89,7 +95,8 @@ async function start() {
     nodeEndpoint: argv['endpoint'],
     wsEndpointPort: argv['ws-endpoint-port'],
     minionsCount: argv['minions-count'],
-    commitment: argv['commitment']
+    commitment: argv['commitment'],
+    bootDelay: argv['boot-delay']
   }
 
   logger.log('info', 'Starting serum-vial server with options', options)

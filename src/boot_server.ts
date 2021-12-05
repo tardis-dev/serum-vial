@@ -11,7 +11,8 @@ export async function bootServer({
   wsEndpointPort,
   minionsCount,
   markets,
-  commitment
+  commitment,
+  bootDelay
 }: BootOptions) {
   // multi core support is linux only feature which allows multiple threads to bind to the same port
   // see https://github.com/uNetworking/uWebSockets.js/issues/304 and https://lwn.net/Articles/542629/
@@ -75,7 +76,7 @@ export async function bootServer({
     })
 
     // just in case to not get hit by serum RPC node rate limits...
-    await wait(100)
+    await wait(bootDelay)
   }
 
   await new Promise<void>(async (resolve) => {
@@ -103,4 +104,5 @@ type BootOptions = {
   minionsCount: number
   commitment: string
   markets: SerumMarket[]
+  bootDelay: number
 }
