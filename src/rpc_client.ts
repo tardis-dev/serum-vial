@@ -590,13 +590,9 @@ class AccountsChangeNotifications {
       // and for some reason next received notification is for already published slot or older
       // restart sub as it's this is situation that should never happen
       if (slot < this._currentSlot!) {
-        logger.log(
-          'debug',
-          `Stale notification, current slot ${this._currentSlot}, update slot: ${slot}, ignoring...`,
-          {
-            market: this._options.marketName
-          }
-        )
+        logger.log('warn', `Stale notification, current slot ${this._currentSlot}, update slot: ${slot}, ignoring...`, {
+          market: this._options.marketName
+        })
       } else if (slot > this._currentSlot!) {
         // otherwise move to pristine state
         this._state = 'PRISTINE'
