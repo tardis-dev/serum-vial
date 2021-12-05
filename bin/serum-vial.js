@@ -55,7 +55,7 @@ const argv = yargs
   .option('boot-delay', {
     type: 'string',
     describe: 'Staggered boot delay in milliseconds so public RPC nodes do not rate limit serum-vial',
-    default: 100
+    default: 500
   })
 
   .option('markets-json', {
