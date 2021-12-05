@@ -28,7 +28,8 @@ describe('serum-vial', () => {
       ],
       minionsCount: 1,
       nodeEndpoint: 'https://solana-api.projectserum.com',
-      wsEndpointPort: undefined
+      wsEndpointPort: undefined,
+      bootDelay: 0
     })
   }, TIMEOUT)
 
