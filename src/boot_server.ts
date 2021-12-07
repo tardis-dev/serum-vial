@@ -60,7 +60,7 @@ export async function bootServer({
 
   for (const market of markets) {
     const serumProducerWorker = new Worker(path.resolve(__dirname, 'serum_producer.js'), {
-      workerData: { marketName: market.name, nodeEndpoint, markets, commitment, wsEndpointPort }
+      workerData: { market, nodeEndpoint, commitment, wsEndpointPort }
     })
 
     serumProducerWorker.on('error', (err) => {

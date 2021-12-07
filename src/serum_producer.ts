@@ -28,17 +28,14 @@ export class SerumProducer {
     private readonly _options: {
       nodeEndpoint: string
       wsEndpointPort: number | undefined
-      marketName: string
+      market: SerumMarket
       commitment: string
-      markets: SerumMarket[]
     }
   ) {}
 
   public async run(onData: OnDataCallback) {
     let started = false
-    logger.log('info', `Serum producer starting for ${this._options.marketName} market...`)
-
-    const marketMeta = this._options.markets.find((m) => m.name == this._options.marketName)!
+    logger.log('info', `Serum producer starting for ${this._options.market.name} market...`)
 
     // don't use Solana web3.js Connection but custom rpcClient so we have more control and insight what is going on
     const rpcClient = new RPCClient({
@@ -49,16 +46,16 @@ export class SerumProducer {
 
     const market = await Market.load(
       rpcClient as any,
-      new PublicKey(marketMeta.address),
+      new PublicKey(this._options.market.address),
       undefined,
-      new PublicKey(marketMeta.programId)
+      new PublicKey(this._options.market.programId)
     )
 
     const priceDecimalPlaces = decimalPlaces(market.tickSize)
     const sizeDecimalPlaces = decimalPlaces(market.minOrderSize)
 
     const dataMapper = new DataMapper({
-      symbol: this._options.marketName,
+      symbol: this._options.market.name,
       market,
       priceDecimalPlaces,
       sizeDecimalPlaces
@@ -76,16 +73,16 @@ export class SerumProducer {
 
       if (n > 200) {
         logger.log('info', `Event loop blocked for ${Math.round(n)} ms.`, {
-          market: this._options.marketName
+          market: this._options.market.name
         })
       }
 
       start = process.hrtime()
     }, interval).unref()
 
-    for await (const notification of rpcClient.streamAccountsNotification(market, this._options.marketName)) {
+    for await (const notification of rpcClient.streamAccountsNotification(market, this._options.market.name)) {
       if (started === false) {
-        logger.log('info', `Serum producer started for ${this._options.marketName} market...`)
+        logger.log('info', `Serum producer started for ${this._options.market.name} market...`)
         started = true
         serumProducerReadyChannel.postMessage('ready')
       }
