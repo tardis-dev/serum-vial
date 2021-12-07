@@ -491,7 +491,7 @@ class AccountsChangeNotifications {
         ws.terminate()
       }
       this._receivedMessagesCount = 0
-    }, 120 * 1000)
+    }, 30 * 1000)
   }
 
   private _sendMessage(ws: WebSocket, message: any) {
