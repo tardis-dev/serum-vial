@@ -198,10 +198,6 @@ Serum-vial supports [SSL/TLS](https://en.wikipedia.org/wiki/Transport_Layer_Secu
 
 WebSocket API provides real-time market data feeds of Serum DEX and uses a bidirectional protocol which encodes all messages as JSON objects.
 
-- each WebSocket client is required to actively send native WebSocket [pings](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#pings_and_pongs_the_heartbeat_of_websockets) to the server with interval less than 30 seconds, otherwise connection may be dropped due to inactivity
-
-- message compression is enabled for clients supporting [`permessage-deflate`](https://tools.ietf.org/html/rfc7692)
-
 <br/>
 
 ### Endpoint URL
