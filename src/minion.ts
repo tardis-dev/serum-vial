@@ -352,7 +352,7 @@ class Minion {
 
   private async _send(ws: WebSocket, getMessage: () => string | undefined) {
     let retries = 0
-    while (ws.getBufferedAmount() > 0) {
+    while (ws.getBufferedAmount() > this.MAX_BACKPRESSURE / 2) {
       await wait(10)
       retries += 1
 
