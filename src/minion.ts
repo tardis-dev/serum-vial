@@ -73,7 +73,7 @@ class Minion {
   private _openConnectionsCount = 0
   private _tid: NodeJS.Timeout | undefined = undefined
 
-  private MAX_BACKPRESSURE = 1024 * 1024
+  private MAX_BACKPRESSURE = 3 * 1024 * 1024
   constructor(private readonly _nodeEndpoint: string, private readonly _markets: SerumMarket[]) {
     this._marketNames = _markets.map((m) => m.name)
     this._server = this._initServer()
