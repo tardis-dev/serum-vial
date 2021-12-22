@@ -440,7 +440,13 @@ class AccountsChangeNotifications {
   private _subscribeToAccountsNotifications(ws: WebSocket) {
     for (const meta of this._accountsMeta) {
       if (ws.readyState !== ws.OPEN) {
-        throw new Error('_subscribeToAccountsNotifications WS closed')
+        logger.log('info', 'Failed to subscribe to accounts notifications', {
+          market: this._options.marketName,
+          wsState: ws.readyState
+        })
+
+        this._restartConnection()
+        return
       }
       this._sendMessage(ws, {
         jsonrpc: '2.0',
