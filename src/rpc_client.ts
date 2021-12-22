@@ -624,9 +624,11 @@ class AccountsChangeNotifications {
       // event for the same slot, just update the data for account
       if (slot === this._currentSlot) {
         if (this._accountsData[accountName] !== undefined) {
-          throw new Error(
-            `Received second update for ${accountName} account for slot ${slot}, market ${this._options.marketName}`
-          )
+          logger.log('warn', `Received second update for ${accountName} account for the same slot`, {
+            slot,
+            market: this._options.marketName,
+            accountName
+          })
         }
         this._accountsData[accountName] = accountData
 
