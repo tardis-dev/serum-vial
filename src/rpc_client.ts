@@ -440,7 +440,7 @@ class AccountsChangeNotifications {
   private _subscribeToAccountsNotifications(ws: WebSocket) {
     for (const meta of this._accountsMeta) {
       if (ws.readyState !== ws.OPEN) {
-        logger.log('info', 'Failed to subscribe to accounts notifications', {
+        logger.log('warn', 'Failed to subscribe to accounts notifications', {
           market: this._options.marketName,
           wsState: ws.readyState
         })
