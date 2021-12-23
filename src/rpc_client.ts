@@ -445,7 +445,11 @@ class AccountsChangeNotifications {
           wsState: ws.readyState
         })
 
-        this._restartConnection()
+        if (ws.readyState === ws.CLOSED) {
+          this._restartConnection()
+        } else {
+          ws.close(1000, 'Failed to subscribe to accounts notification')
+        }
         return
       }
       this._sendMessage(ws, {
