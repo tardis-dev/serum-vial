@@ -331,11 +331,20 @@ export class DataMapper {
 
         // detect l2 trades based on fills
         if (message.type === 'fill' && message.maker === false) {
-          // this is rather fragile way of finding matching fill, can it be done better?
+          let matchingMakerFill
 
-          const matchingMakerFill = l3Diff.find(
-            (m) => m.type === 'fill' && m.maker === true && m.size === message.size
-          ) as Fill | undefined
+          for (let j = i - 1; j >= 0; j--) {
+            const potentialFillMessage = l3Diff[j]!
+
+            if (
+              potentialFillMessage.type === 'fill' &&
+              potentialFillMessage.maker === true &&
+              potentialFillMessage.size === message.size
+            ) {
+              matchingMakerFill = potentialFillMessage
+              break
+            }
+          }
 
           const makerFillOrderId = matchingMakerFill !== undefined ? matchingMakerFill.orderId : undefined
 
