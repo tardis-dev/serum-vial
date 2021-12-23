@@ -407,7 +407,7 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
 
 - `id` field is an unique id constructed by joining fill taker and fill maker order id
 
-- `takerAccount` and `makerAccount` fields are available since version `1.5.0` and provide info regarding maker and taker account addresses that constitute the trade
+- `takerAccount` and `makerAccount` fields are available since version `1.5.0` and provide info regarding maker and taker open account addresses that constitute the trade
 
 ```ts
 {
