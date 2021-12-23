@@ -345,7 +345,24 @@ export class DataMapper {
             matchingMakerFill.maker === true &&
             matchingMakerFill.size === message.size
               ? matchingMakerFill.orderId
-              : '_'
+              : undefined
+
+          const makerFillAccount =
+            matchingMakerFill !== undefined &&
+            matchingMakerFill.maker === true &&
+            matchingMakerFill.size === message.size
+              ? matchingMakerFill.account
+              : undefined
+
+          if (makerFillOrderId === undefined) {
+            logger.log('warn', 'Trade without matching maker fill order', {
+              market: this._options.symbol,
+              quote: newQuote,
+              slot,
+              fill: message,
+              matchingMakerFill
+            })
+          }
 
           const tradeId = `${message.orderId}|${makerFillOrderId}`
 
@@ -358,7 +375,9 @@ export class DataMapper {
             id: tradeId,
             side: message.side,
             price: message.price,
-            size: message.size
+            size: message.size,
+            takerAccount: message.account,
+            makerAccount: makerFillAccount!
           }
 
           yield this._putInEnvelope(tradeMessage, true)

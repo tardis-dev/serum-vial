@@ -382,14 +382,16 @@ Up to 100 recent trades pushed immediately after successful subscription confirm
   "trades": [
     {
       "type": "trade",
-      "market": "BTC/USDC",
-      "timestamp": "2021-03-23T19:03:06.723Z",
-      "slot": 70468384,
+      "market": "SOL/USDC",
+      "timestamp": "2021-12-23T14:31:16.733Z",
+      "slot": 112915164,
       "version": 3,
-      "id": "10239824528804319520203515|3.0821|1616526186723",
-      "side": "buy",
-      "price": "55447.7",
-      "size": "3.0821"
+      "id": "3313016788894161792503559|3313035235638235438412464",
+      "side": "sell",
+      "price": "179.599",
+      "size": "125.4",
+      "takerAccount": "AAddgLu9reZCUWW1bNQFaXrCMAtwQpMRvmeusgk4pCM6",
+      "makerAccount": "EpAdzaqV13Es3x4dukfjFoCrKVXnZ7y9Y76whgMHo5qx"
     }
   ]
 }
@@ -405,6 +407,8 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
 
 - `id` field is an unique id constructed by joining fill taker and fill maker order id
 
+- `takerAccount` and `makerAccount` fields are available since version `1.5.0` and provide info regarding maker and taker account addresses that constitute the trade
+
 ```ts
 {
   "type": "trade",
@@ -416,6 +420,8 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
   "side": "buy" | "sell",
   "price": string,
   "size": string
+  "takerAccount": string
+  "makerAccount": string
 }
 ```
 
@@ -424,14 +430,16 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
 ```
 {
   "type": "trade",
-  "market": "BTC/USDC",
-  "timestamp": "2021-03-23T19:03:06.723Z",
-  "slot": 70468384,
+  "market": "SOL/USDC",
+  "timestamp": "2021-12-23T14:31:16.733Z",
+  "slot": 112915164,
   "version": 3,
-  "id": "429716903197064009133440|432281000623309628330652",
-  "side": "buy",
-  "price": "55447.7",
-  "size": "3.0821"
+  "id": "3313016788894161792503559|3313035235638235438412464",
+  "side": "sell",
+  "price": "179.599",
+  "size": "125.4",
+  "takerAccount": "AAddgLu9reZCUWW1bNQFaXrCMAtwQpMRvmeusgk4pCM6",
+  "makerAccount": "EpAdzaqV13Es3x4dukfjFoCrKVXnZ7y9Y76whgMHo5qx"
 }
 ```
 
