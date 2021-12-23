@@ -333,34 +333,20 @@ export class DataMapper {
         if (message.type === 'fill' && message.maker === false) {
           // this is rather fragile way of finding matching fill, can it be done better?
 
-          const matchingMakerFill =
-            l3Diff[i - 1] !== undefined && l3Diff[i - 1]!.type === 'fill'
-              ? (l3Diff[i - 1] as Fill)
-              : l3Diff[i - 2] !== undefined && l3Diff[i - 2]!.type === 'fill'
-              ? (l3Diff[i - 2] as Fill)
-              : undefined
+          const matchingMakerFill = l3Diff.find(
+            (m) => m.type === 'fill' && m.maker === true && m.size === message.size
+          ) as Fill | undefined
 
-          const makerFillOrderId =
-            matchingMakerFill !== undefined &&
-            matchingMakerFill.maker === true &&
-            matchingMakerFill.size === message.size
-              ? matchingMakerFill.orderId
-              : undefined
+          const makerFillOrderId = matchingMakerFill !== undefined ? matchingMakerFill.orderId : undefined
 
-          const makerFillAccount =
-            matchingMakerFill !== undefined &&
-            matchingMakerFill.maker === true &&
-            matchingMakerFill.size === message.size
-              ? matchingMakerFill.account
-              : undefined
+          const makerFillAccount = matchingMakerFill !== undefined ? matchingMakerFill.account : undefined
 
           if (makerFillOrderId === undefined) {
             logger.log('warn', 'Trade without matching maker fill order', {
               market: this._options.symbol,
-              quote: newQuote,
               slot,
               fill: message,
-              matchingMakerFill
+              l3Diff
             })
           }
 
