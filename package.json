@@ -38,6 +38,7 @@
   ],
   "license": "MPL-2.0",
   "dependencies": {
+    "@blockworks-foundation/mango-client": "^3.2.25",
     "@project-serum/serum": "^0.13.61",
     "@solana/web3.js": "^1.31.0",
     "@types/bintrees": "^1.0.3",
