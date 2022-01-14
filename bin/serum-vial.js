@@ -48,7 +48,7 @@ const argv = yargs
   .option('commitment', {
     type: 'string',
     describe: 'Solana commitment level to use when communicating with RPC node',
-    choices: ['processed', 'confirmed'],
+    choices: ['processed', 'confirmed', 'finalized'],
     default: 'confirmed'
   })
 
