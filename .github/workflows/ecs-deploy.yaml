@@ -1,0 +1,36 @@
+name: ecs-deploy
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # These permissions are needed to interact with GitHub's OIDC Token endpoint.
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      DOCKER_BUILDKIT: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::623699964423:role/githubactions-oidc-role
+          aws-region: us-east-2
+
+      - name: Push to ECR
+        id: tag
+        run: |
+          aws ecr get-login-password --region ${region}  | docker login --username AWS --password-stdin ${accountid}.dkr.ecr.${region}.amazonaws.com
+          docker build -t ${ecr_repository} .
+          docker tag ${ecr_repository}:latest ${accountid}.dkr.ecr.${region}.amazonaws.com/${ecr_repository}:latest
+          docker push ${accountid}.dkr.ecr.${region}.amazonaws.com/${ecr_repository}:latest
+        env:
+          accountid: 623699964423
+          region: us-east-2
+          ecr_repository: serum_vial
