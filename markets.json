@@ -1,0 +1,50 @@
+[
+	{
+		"address": "CAgAeMD7quTdnr6RPa7JySQpjf3irAmefYNdTb6anemq",
+		"deprecated": true,
+		"name": "BTC/soUSDC",
+		"programId": "4ckmDgGdxQoPDLUkDT3vHgSAkzA3QRdNq5ywwY4sUSJn"
+	},
+	{
+		"address": "CVfYa8RGXnuDBeGmniCcdkBwoLqVxh92xB1JqgRQx3F",
+		"deprecated": true,
+		"name": "BTC/USDC",
+		"programId": "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o"
+	},
+	{
+		"address": "A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw",
+		"deprecated": false,
+		"name": "BTC/USDC",
+		"programId": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
+	},
+	{
+		"address": "8AcVjMG2LTbpkjNoyq8RwysokqZunkjy3d5JDzxC6BJa",
+		"deprecated": true,
+		"name": "BTC/soUSDT",
+		"programId": "4ckmDgGdxQoPDLUkDT3vHgSAkzA3QRdNq5ywwY4sUSJn"
+	},
+	{
+		"address": "EXnGBBSamqzd3uxEdRLUiYzjJkTwQyorAaFXdfteuGXe",
+		"deprecated": true,
+		"name": "BTC/soUSDT",
+		"programId": "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o"
+	},
+	{
+		"address": "5r8FfnbNYcQbS1m4CYmoHYGjBtu6bxfo6UJHNRfzPiYH",
+		"deprecated": true,
+		"name": "BTC/soUSDT",
+		"programId": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
+	},
+	{
+		"address": "C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4",
+		"deprecated": false,
+		"name": "BTC/USDT",
+		"programId": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
+	},
+	{
+		"name": "renBTC/USDC",
+		"programId": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+		"deprecated": false,
+		"address": "74Ciu5yRzhe8TFTHvQuEVbFZJrbnCMRoohBK33NNiPtv"
+	}
+]
