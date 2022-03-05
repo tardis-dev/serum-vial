@@ -391,7 +391,13 @@ Up to 100 recent trades pushed immediately after successful subscription confirm
       "price": "179.599",
       "size": "125.4",
       "takerAccount": "AAddgLu9reZCUWW1bNQFaXrCMAtwQpMRvmeusgk4pCM6",
-      "makerAccount": "EpAdzaqV13Es3x4dukfjFoCrKVXnZ7y9Y76whgMHo5qx"
+      "makerAccount": "EpAdzaqV13Es3x4dukfjFoCrKVXnZ7y9Y76whgMHo5qx",
+      "takerOrderId": "3313016788894161792503559",
+      "makerOrderId": "3313035235638235438412464",
+      "takerClientId": "875345",
+      "makerClientId": "875345",
+      "takerFeeCost": -3.2,
+      "makerFeeCost": 15.4
     }
   ]
 }
@@ -407,8 +413,6 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
 
 - `id` field is an unique id constructed by joining fill taker and fill maker order id
 
-- `takerAccount` and `makerAccount` fields are available since version `1.5.0` and provide info regarding maker and taker open account addresses that constitute the trade
-
 ```ts
 {
   "type": "trade",
@@ -419,9 +423,15 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
   "id": string,
   "side": "buy" | "sell",
   "price": string,
-  "size": string
-  "takerAccount": string
-  "makerAccount": string
+  "size": string,
+  "takerAccount": string,
+  "makerAccount": string,
+  "takerOrderId": string,
+  "makerOrderId": string,
+  "takerClientId": string,
+  "makerClientId": string,
+  "takerFeeCost": number,
+  "makerFeeCost": number
 }
 ```
 
@@ -439,7 +449,13 @@ Pushed real-time for each trade as it happens on a DEX (decoded from the `eventQ
   "price": "179.599",
   "size": "125.4",
   "takerAccount": "AAddgLu9reZCUWW1bNQFaXrCMAtwQpMRvmeusgk4pCM6",
-  "makerAccount": "EpAdzaqV13Es3x4dukfjFoCrKVXnZ7y9Y76whgMHo5qx"
+  "makerAccount": "EpAdzaqV13Es3x4dukfjFoCrKVXnZ7y9Y76whgMHo5qx",
+  "takerOrderId": "3313016788894161792503559",
+  "makerOrderId": "3313035235638235438412464",
+  "takerClientId": "875345",
+  "makerClientId": "875345",
+  "takerFeeCost": -3.2,
+  "makerFeeCost": 15.4
 }
 ```
 
