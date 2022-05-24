@@ -62,6 +62,12 @@ export interface Trade extends DataMessage {
   readonly id: string
   readonly takerAccount: string
   readonly makerAccount: string
+  readonly takerOrderId: string
+  readonly makerOrderId: string
+  readonly takerClientId: string
+  readonly makerClientId: string
+  readonly takerFeeCost: number
+  readonly makerFeeCost: number
 }
 
 export interface Fill extends DataMessage, OrderItem {
