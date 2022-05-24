@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 from node:16-slim
 # version arg contains current git tag
 ARG VERSION_ARG
